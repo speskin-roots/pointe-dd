@@ -1,666 +1,1075 @@
 import { useState } from "react";
 
-const Section = ({ title, color, children }) => (
-  <div style={{ marginBottom: 20, borderRadius: 12, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.08)" }}>
-    <div style={{ background: color, padding: "10px 18px" }}>
-      <h3 style={{ margin: 0, color: "#fff", fontSize: 14, fontWeight: 700, letterSpacing: 0.3 }}>{title}</h3>
+// ── SHARED CONSTANTS ────────────────────────────────────────────────────────
+const CONTRACT_TOTAL = 23000000;
+const POINTE_UNITS = 518;
+const OAK_UNITS = 182;
+const TOTAL_DOORS = 700;
+const PRICE_PER_DOOR = CONTRACT_TOTAL / TOTAL_DOORS; // ~32,857
+
+// Blended price split pro-rata by doors
+const POINTE_PRICE = Math.round((POINTE_UNITS / TOTAL_DOORS) * CONTRACT_TOTAL);
+const OAK_PRICE    = Math.round((OAK_UNITS   / TOTAL_DOORS) * CONTRACT_TOTAL);
+
+const OAK = {
+  totalUnits:182, occupied:147, vacant:36, occPct:80.77,
+  avgMarketRent:762.80, avgLeasedRent:709.10,
+  totalMarketMonthly:138830, totalBillingMonthly:106462,
+  totalRentMonthly:104237, parkingMonthly:2225,
+  annualBilling:106462*12, annualMarketPotential:138830*12,
+};
+const DEL = {
+  total:99797.93, current:35198.67, d30:14845.33, d60:8687.50, d90:41066.43,
+};
+
+// ── HELPERS ─────────────────────────────────────────────────────────────────
+const fmt  = n => n.toLocaleString("en-US",{maximumFractionDigits:0});
+const fmtD = n => "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtM = n => "$"+(n/1e6).toFixed(2)+"M";
+
+const Section = ({title,color,children}) => (
+  <div style={{marginBottom:18,borderRadius:12,overflow:"hidden",boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
+    <div style={{background:color,padding:"9px 18px"}}>
+      <h3 style={{margin:0,color:"#fff",fontSize:13,fontWeight:700,letterSpacing:0.3}}>{title}</h3>
     </div>
-    <div style={{ background: "#fff", padding: "16px 18px" }}>{children}</div>
+    <div style={{background:"#fff",padding:"14px 18px"}}>{children}</div>
   </div>
 );
-
-const Row = ({ label, value, sub, flag }) => (
-  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", padding: "7px 0", borderBottom: "1px solid #f1f5f9" }}>
-    <span style={{ fontSize: 13, color: "#475569", flex: 1, paddingRight: 12 }}>{label}</span>
-    <div style={{ textAlign: "right", minWidth: 160 }}>
-      <span style={{ fontSize: 13, fontWeight: 700, color: flag === "red" ? "#dc2626" : flag === "green" ? "#16a34a" : flag === "yellow" ? "#d97706" : "#1e293b" }}>{value}</span>
-      {sub && <div style={{ fontSize: 11, color: "#94a3b8" }}>{sub}</div>}
+const Row = ({label,value,sub,flag}) => (
+  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"6px 0",borderBottom:"1px solid #f1f5f9"}}>
+    <span style={{fontSize:12,color:"#475569",flex:1,paddingRight:12}}>{label}</span>
+    <div style={{textAlign:"right",minWidth:180}}>
+      <span style={{fontSize:12,fontWeight:700,color:flag==="red"?"#dc2626":flag==="green"?"#16a34a":flag==="yellow"?"#d97706":"#1e293b"}}>{value}</span>
+      {sub&&<div style={{fontSize:10,color:"#94a3b8"}}>{sub}</div>}
     </div>
   </div>
 );
-
-const Badge = ({ text, color }) => (
-  <span style={{ display: "inline-block", padding: "2px 10px", borderRadius: 20, fontSize: 11, fontWeight: 700, marginRight: 6, marginBottom: 4,
-    background: color === "red" ? "#fee2e2" : color === "yellow" ? "#fef3c7" : color === "green" ? "#dcfce7" : "#e0e7ff",
-    color: color === "red" ? "#dc2626" : color === "yellow" ? "#b45309" : color === "green" ? "#15803d" : "#4338ca" }}>
-    {text}
-  </span>
+const Badge = ({text,color}) => (
+  <span style={{display:"inline-block",padding:"2px 9px",borderRadius:20,fontSize:10,fontWeight:700,marginRight:5,marginBottom:4,
+    background:color==="red"?"#fee2e2":color==="yellow"?"#fef3c7":color==="green"?"#dcfce7":"#e0e7ff",
+    color:color==="red"?"#dc2626":color==="yellow"?"#b45309":color==="green"?"#15803d":"#4338ca"}}>{text}</span>
 );
-
-const Alert = ({ type, children }) => (
-  <div style={{ background: type === "red" ? "#fef2f2" : type === "yellow" ? "#fffbeb" : type === "purple" ? "#f5f3ff" : "#f0fdf4",
-    border: `1px solid ${type === "red" ? "#fca5a5" : type === "yellow" ? "#fcd34d" : type === "purple" ? "#c4b5fd" : "#86efac"}`,
-    borderRadius: 8, padding: "10px 14px", marginBottom: 10, fontSize: 13,
-    color: type === "red" ? "#991b1b" : type === "yellow" ? "#92400e" : type === "purple" ? "#4c1d95" : "#166534" }}>
-    {children}
+const Alrt = ({type,children}) => (
+  <div style={{background:type==="red"?"#fef2f2":type==="yellow"?"#fffbeb":type==="purple"?"#f5f3ff":"#f0fdf4",
+    border:`1px solid ${type==="red"?"#fca5a5":type==="yellow"?"#fcd34d":type==="purple"?"#c4b5fd":"#86efac"}`,
+    borderRadius:8,padding:"9px 13px",marginBottom:10,fontSize:12,
+    color:type==="red"?"#991b1b":type==="yellow"?"#92400e":type==="purple"?"#4c1d95":"#166534"}}>{children}</div>
+);
+const KpiGrid = ({items}) => (
+  <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:8,marginBottom:16}}>
+    {items.map(({label,value,color,sub})=>(
+      <div key={label} style={{background:"#fff",borderRadius:10,padding:"11px 8px",textAlign:"center",boxShadow:"0 1px 4px rgba(0,0,0,0.08)"}}>
+        <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,textTransform:"uppercase",marginBottom:2}}>{label}</div>
+        <div style={{fontSize:15,fontWeight:900,color}}>{value}</div>
+        {sub&&<div style={{fontSize:9,color:"#94a3b8",marginTop:1}}>{sub}</div>}
+      </div>
+    ))}
   </div>
 );
 
-const units = 518;
-function calcRow(occ, rent, expR, capR) {
-  const egi = units * rent * occ * 12;
-  const noi = egi * (1 - expR);
-  const value = noi / capR;
-  return { egi, noi, value, perDoor: value / units };
+// ── EXIT MODEL CALC ─────────────────────────────────────────────────────────
+function calcRows(scenarios, numUnits, expR, capR) {
+  return scenarios.map(s => {
+    const egi  = numUnits * s.rent * s.occ * 12;
+    const noi  = egi * (1 - expR/100);
+    const val  = noi / (capR/100);
+    return { ...s, egi, noi, val, perDoor: val/numUnits };
+  });
 }
 
-const exitScenarios = [
-  { label: "Today (65% / $912 flat)", occ: 0.65, rent: 912 },
-  { label: "75% / $912 flat", occ: 0.75, rent: 912 },
-  { label: "80% / $950 post-reno", occ: 0.80, rent: 950 },
-  { label: "85% / $975 post-reno", occ: 0.85, rent: 975 },
-  { label: "90% / $1,000 post-reno", occ: 0.90, rent: 1000 },
-  { label: "95% / $1,025 (bull case)", occ: 0.95, rent: 1025 },
+// ── COMP DATA ────────────────────────────────────────────────────────────────
+const pointeComps = [
+  {name:"Las Plazas ⭐ PRIMARY COMP",addr:"3940 S Shaver St — DIRECTLY ACROSS THE STREET",dist:"0 mi",built:"1964",units:"80",occ:"90%+ occupied · <5% delinquency",occF:"green",rents:"Magnolia 1BR/580sf $809 · Willow 1BR/620sf $829 · Palm 2BR/750sf $949 · Cypress 2BR/925sf $999 · Oak 3BR/1200sf $1,299",eff:"$809–$1,299 confirmed asking",note:"🏆 BEST DIRECT COMP — across the street, same vintage, $13K/door renovation, 90%+ occ, <5% delinquency, waiting list on all 2BR+. ⚠️ 1BRs are the ONLY struggle — direct signal for Pointe's 1BR lease-up strategy.",noteF:"green",ph:"(346) 980-7106",primary:true,
+    floorplans:[
+      {name:"Magnolia",bed:"1BR/1BA",sqft:580, rent:809},
+      {name:"Willow",  bed:"1BR/1BA",sqft:620, rent:829},
+      {name:"Palm",    bed:"2BR",    sqft:750, rent:949},
+      {name:"Cypress", bed:"2BR",    sqft:925, rent:999},
+      {name:"Oak",     bed:"3BR",    sqft:1200,rent:1299},
+    ]},
+  {name:"Veranda Village",addr:"3635 Shaver St, Pasadena TX",dist:"~3 mi",built:"1971",units:"329–422",occ:"Low",occF:"red",rents:"$549–~$1,050",eff:"~$549–$800 effective",note:"⚠️ Weakest comp — sets the floor. Significant deferred maintenance.",noteF:"red"},
+  {name:"Quay Point",addr:"3925 Arlington Square Dr, Houston TX",dist:"~4 mi",built:"1963",units:"134",occ:"~14% vacancy",occF:"red",rents:"$660–$1,020",eff:"~$660–$900",note:"Active vacancy with price-drop promotions.",noteF:"yellow"},
+  {name:"Willow Tree (SMI Realty)",addr:"4910 Allendale Rd, Houston TX",dist:"~4 mi",built:"1974",units:"206",occ:"5 units listed",occF:"yellow",rents:"1BR $830 | 2BR $855",eff:"~$830–$1,195",note:"🔍 1BR at $830 is BELOW The Pointe's $912 avg — partial reno doesn't justify premium.",noteF:"yellow",ph:"(832) 706-4314"},
+  {name:"Las Plazas",addr:"3940 S Shaver St, Houston TX",dist:"~4 mi",built:"1964",units:"80",occ:"Active availability",occF:"yellow",rents:"1BR $809–$829 | 2BR $949–$999",eff:"~$809–$1,100",note:"📋 $1.35M reno ($17K/unit) still yields 1BR BELOW Pointe avg.",noteF:"yellow",ph:"(346) 980-7106"},
+  {name:"Quarters on Red Bluff",addr:"2300 Red Bluff Rd, Pasadena TX",dist:"~1.5 mi",built:"1971",units:"170",occ:"95% occupied",occF:"green",rents:"1BR $840–$975 | 2BR $975–$1,250",eff:"~$840–$1,100",note:"✅ Same 1971 vintage, same submarket, 95% occ. Best proof of concept.",noteF:"green",ph:"(713) 473-5521"},
+  {name:"Vista Azul",addr:"3500 Red Bluff Rd, Pasadena TX",dist:"~1 mi",built:"1971",units:"308",occ:"106 units vacant",occF:"red",rents:"1BR $849–$925 | 2BR $1,100–$1,199",eff:"~$749–$1,050",note:"⚠️ Full reno + poor management = 106 vacancies. Management is the differentiator.",noteF:"yellow",ph:"(346) 222-4228"},
+  {name:"Terracita",addr:"801 S Allen-Genoa Rd, South Houston TX",dist:"~3 mi",built:"1962",units:"177",occ:"91.5% occupied",occF:"green",rents:"$939–$1,579 All Bills Paid",eff:"~$815–$1,050 ex-utilities",note:"✅ Best stabilized comp. Normalize -$100–$125/mo for utilities.",noteF:"green"},
+  {name:"Red Pines ⭐ ASPIRATIONAL",addr:"3823 Red Bluff Rd, Pasadena TX",dist:"~2 mi",built:"Vintage — gut-reno",units:"Mid-size",occ:"Active — 5-star, stable",occF:"green",rents:"Studio $749 | 1BR $899–$929 | 2BR $1,099–$1,175 | 3BR $1,499",eff:"$749–$1,499 — no concessions",note:"🏆 Same Pasadena submarket, fully repositioned. Rent ceiling for The Pointe.",noteF:"green",ph:"(832) 219-6757",asp:true},
+];
+const oakComps = [
+  {name:"Silver Club",addr:"5160 Silver Creek Dr, Houston TX",dist:"~0.15 mi",built:"1960–62",units:"45",occ:"Active",occF:"yellow",rents:"$950–$1,050",eff:"~$950–$1,050",note:"Closest comp to Oak Shadows. Updated tile/granite. Sets nearby floor.",noteF:"yellow"},
+  {name:"Willow Tree (SMI Realty)",addr:"4910 Allendale Rd, Houston TX",dist:"~4 mi",built:"1974",units:"206",occ:"5 units listed",occF:"yellow",rents:"1BR $830 | 2BR $855",eff:"~$830–$1,195",note:"🔍 Partial reno, bilingual management. Similar workforce profile.",noteF:"yellow",ph:"(832) 706-4314"},
+  {name:"Terracita",addr:"801 S Allen-Genoa Rd, South Houston TX",dist:"~3 mi",built:"1962",units:"177",occ:"91.5% occupied",occF:"green",rents:"$939–$1,579 All Bills Paid",eff:"~$815–$1,050 ex-utilities",note:"✅ Best stabilized reference for Oak Shadows post-renovation ceiling.",noteF:"green"},
+  {name:"Red Pines ⭐ ASPIRATIONAL",addr:"3823 Red Bluff Rd, Pasadena TX",dist:"~2 mi",built:"Vintage — gut-reno",units:"Mid-size",occ:"Active — stable leasing",occF:"green",rents:"Studio $749 | 1BR $899–$929 | 2BR $1,099–$1,175",eff:"$749–$1,175 — no concessions",note:"🏆 Aspirational ceiling for Oak Shadows if fully repositioned.",noteF:"green",ph:"(832) 219-6757",asp:true},
 ];
 
-const comps = [
-  {
-    name: "Veranda Village",
-    address: "3635 Shaver St, Pasadena TX 77504",
-    distance: "~3 mi",
-    built: "1971", units: "329–422",
-    manager: "Self-managed (formerly West Point Village)",
-    renovated: "Partially renovated",
-    occ: "Low — no availability on major sites; reviews cite deferred maintenance, AC failures, pest issues",
-    occFlag: "red",
-    rents: "Starting $549 (studio) — up to ~$1,050",
-    rentFlag: "yellow",
-    note: "⚠️ Significant negative reviews: AC failures, rodents, sewage, security problems. Management recently changed. Weakest comp — sets the floor but not the ceiling.",
-    noteFlag: "red",
-    effective: "~$549–$800 effective",
-    allBillsPaid: false, aspirational: false,
-  },
-  {
-    name: "Quay Point Apartments",
-    address: "3925 Arlington Square Dr, Houston TX 77034",
-    distance: "~4 mi",
-    built: "1963", units: "134",
-    manager: "Private-Eighteen Capital",
-    renovated: "Partially updated",
-    occ: "~14% vacancy — 19 units listed, starting at $660",
-    occFlag: "red",
-    rents: "$660–$1,020 (studio to 2BR)",
-    rentFlag: "yellow",
-    note: "Smaller property. Active vacancy with 19 units listed. Price drop promotions visible. Managed by Private-Eighteen Capital.",
-    noteFlag: "yellow",
-    effective: "~$660–$900 effective",
-    allBillsPaid: false, aspirational: false,
-  },
-  {
-    name: "Willow Tree Apartments (SMI Realty)",
-    address: "4910 Allendale Rd, Houston TX 77017",
-    distance: "~4 mi",
-    built: "1974", units: "206",
-    manager: "SMI Realty Management — long-term owner/operator, bilingual staff",
-    renovated: "Partially updated — hardwood floors, walk-in closets; older finishes overall",
-    occ: "5 units listed — active leasing; CoStar 4.0 blended rating",
-    occFlag: "yellow",
-    rents: "1BR $830 | 2BR $855–call | 3BR $1,195–$1,420",
-    rentFlag: "yellow",
-    note: "🔍 Direct operational comp for The Pointe. Similar 1970s vintage, 206 units, bilingual management, workforce tenant base. SMI offers Flex-Pay (split 1st/15th), money-back maintenance guarantee, free after-school kids club — all renter-retention tools that work in this demographic. Reviews are mixed: some praise management, others cite racial bias complaints vs. one manager (now documented/public). 1BR at $830 is BELOW The Pointe's current $912 avg — meaning Willow Tree is leasing at a rent discount to your property despite being partially renovated. 3BR units achieve $1,195–$1,420, which is notable ceiling data. No utilities bundled.",
-    noteFlag: "yellow",
-    effective: "~$830–$1,195 (no concessions/utilities noted)",
-    allBillsPaid: false, aspirational: false,
-    phone: "(832) 706-4314",
-    extras: ["Flex-Pay (1st & 15th)", "Money-back maintenance guarantee", "Free after-school kids club", "Se habla español", "W/D hookups", "Pool + playground", "Controlled access", "Virtual 3D tours available"],
-  },
-  {
-    name: "Las Plazas Apartments",
-    address: "3940 S Shaver St, Houston TX 77034",
-    distance: "~4 mi",
-    built: "1964", units: "80",
-    manager: "Private owner/operator — (346) 980-7106",
-    renovated: "Partially renovated — $1.35M capex (2016–2019), new roof 2025, ceramic tile, granite counters, island kitchens, faux wood floors, high-efficiency HVAC",
-    occ: "Multiple units listed — active availability; 'renovation special' currently promoted on Yelp",
-    occFlag: "yellow",
-    rents: "1BR $809–$829 | 2BR $949–$999 | 3BR $1,289–$1,299",
-    rentFlag: "yellow",
-    note: "📋 Investment sale comp (Crexi listing active). 80-unit garden-style, built 1964, partially renovated with $1.35M in capex. Assumable Fannie Mae loan at 3.35% — seller is actively marketing for investor acquisition. Currently listing a 'renovation special,' suggesting remaining vacancy pressure and ongoing lease-up. Key insight: even with $1.35M renovation (2016–2019, ~$17K/unit), rents are only $809–$999 — 1BR rents are BELOW The Pointe's current $912 avg. This confirms that partial renovation in this submarket does NOT automatically justify significant rent premium vs. current unrenovated rates. Full Red Pines-quality renovation is required to push past $950+ reliably.",
-    noteFlag: "yellow",
-    effective: "~$809–$1,100 effective",
-    allBillsPaid: false, aspirational: false,
-    phone: "(346) 980-7106",
-    extras: ["Assumable Fannie Mae loan @ 3.35%", "On Crexi — actively for sale", "$1.35M renovation (2016–2019)", "New roof 2025", "Granite counters + island kitchens", "Ceramic tile + faux wood floors", "High-efficiency HVAC", "Gated + controlled access", "Bark park", "On-site laundry", "Pasadena ISD zoned"],
-  },
-  {
-    name: "Quarters on Red Bluff (formerly Chateau Creole)",
-    address: "2300 Red Bluff Rd, Pasadena TX 77506",
-    distance: "~1.5 mi",
-    built: "1971", units: "170",
-    manager: "JAW Equity LLC — (713) 473-5521",
-    renovated: "Partially updated — non-carpeted floors, premium countertops, W/D hookups, fireplaces in select units",
-    occ: "95% occupied — strongest occupancy of any partially-renovated comp in this set",
-    occFlag: "green",
-    rents: "1BR $840–$975 | 2BR $975–$1,250 | 3BR up to $1,600",
-    rentFlag: "green",
-    note: "✅ High-value operational comp — same 1971 vintage as The Pointe, same Pasadena submarket, 95% occupied and managed by JAW Equity LLC. This is the strongest proof that a 1971 vintage property in this exact submarket can be stabilized at high occupancy. Formerly known as Chateau Creole. Achieves $840–$975 on 1BRs at 95% occ — above The Pointe's current $912 avg. Price drops noted on ApartmentFinder ($160 off promotion), suggesting some lease-up pressure at the top of the range. No utilities bundled. W/D hookups are a meaningful amenity at this price point. HAR data shows rent range up to $1,600 on larger units.",
-    noteFlag: "green",
-    effective: "~$840–$1,100 effective (concession active on upper units)",
-    allBillsPaid: false, aspirational: false,
-    phone: "(713) 473-5521",
-    extras: ["95% occupied", "W/D hookups", "Fireplaces (select units)", "Bay windows + courtyard views", "2 pools", "Playground + grill areas", "Pasadena ISD zoned", "Price drop promotion active on upper units"],
-  },
-  {
-    name: "Vista Azul Apartments",
-    address: "3500 Red Bluff Rd, Pasadena TX 77503",
-    distance: "~1 mi",
-    built: "1971", units: "308",
-    manager: "iLoveLeasing / on-site — (281) 247-5289 | (346) 222-4228",
-    renovated: "Fully renovated — 3cm granite counters, vessel sinks, framed mirrors, crown molding, tiled bathtub surrounds, pass-through kitchens with breakfast bars, resort pool",
-    occ: "106 units listed as available — significant active vacancy; 'Half Off Dec & Half Off March' concession promotion running",
-    occFlag: "red",
-    rents: "1BR $849–$925 | 2BR $1,100–$1,199 | 3BR up to $1,699",
-    rentFlag: "yellow",
-    note: "⚠️ Critical comp — same 1971 vintage, same Red Bluff Rd corridor, fully renovated with Red Pines-identical finishes (3cm granite, vessel sinks, crown molding), yet running aggressive half-month-free concessions and showing 106 active vacancies. CoStar blended rating 3.2/5 — below average. Reviews in Spanish cite flooding, broken AC not treated as emergency. This is the cautionary tale: full renovation + good finishes does NOT guarantee occupancy if management quality is poor. Vista Azul proves the renovation ceiling (~$925–$1,100 effective) but also proves that management execution is the difference between 95% occ (Quarters) and significant vacancy. NOTE: Red Pines is only 0.53 miles from Vista Azul — they compete directly for the same tenant.",
-    noteFlag: "yellow",
-    effective: "~$749–$1,050 effective (half-month concessions active)",
-    allBillsPaid: false, aspirational: false,
-    phone: "(346) 222-4228",
-    extras: ["3cm granite countertops", "Vessel sinks + framed mirrors", "Crown molding", "Tiled bathtub surrounds", "Pass-through kitchen + breakfast bar", "Resort-style pool", "Business center", "Clubhouse for rent", "Free Zumba classes", "Se habla español", "Half-off concessions currently active"],
-  },
-  {
-    name: "Terracita Apartments",
-    address: "801 S Allen-Genoa Rd, South Houston TX 77587",
-    distance: "~3 mi",
-    built: "1962", units: "177",
-    manager: "Better World LLC (listed for sale via Colliers)",
-    renovated: "Fully renovated — wood plank floors, new appliances, updated interiors",
-    occ: "91.5% occupied — strongest occupancy in comp set",
-    occFlag: "green",
-    rents: "$939–$1,579/mo | All Bills Paid",
-    rentFlag: "green",
-    note: "✅ Best stabilized comp. Currently listed for sale via Colliers at 91.5% occupied. All bills paid (utilities included) — normalize by ~$100–125/mo for fair comparison to The Pointe.",
-    noteFlag: "green",
-    effective: "~$815–$1,050 effective (ex-utilities)",
-    allBillsPaid: true, aspirational: false,
-  },
-  {
-    name: "Silver Club Apartments",
-    address: "5160 Silver Creek Dr, Houston TX 77017",
-    distance: "~5 mi",
-    built: "1960–1962", units: "45–46",
-    manager: "Devonshire Real Estate & Asset Management",
-    renovated: "Updated — tile/granite counters, modern lighting",
-    occ: "Active — listings from $1,025; small property, limited data",
-    occFlag: "yellow",
-    rents: "$950–$1,050 (1–2 BR)",
-    rentFlag: "yellow",
-    note: "Very small property (45 units) managed by Devonshire. Achieves $950–$1,050 but at tiny scale — limited comparability. Closest property to Oak Shadows (0.15 mi).",
-    noteFlag: "yellow",
-    effective: "~$950–$1,050 (no concessions noted)",
-    allBillsPaid: false, aspirational: false,
-  },
-  {
-    name: "Red Pines Apartments ⭐ ASPIRATIONAL COMP",
-    address: "3823 Red Bluff Rd, Pasadena TX 77503",
-    distance: "~2 mi",
-    built: "Vintage — fully gut-renovated",
-    units: "N/A — mid-size community",
-    manager: "Greenline Apartment Management (professional, bilingual)",
-    renovated: "Full luxury renovation — 3cm granite counters, vinyl wood floors, vessel sinks, crown molding, backsplash, gooseneck faucets, drum chandeliers, framed mirrors, gas burning stoves, resort pool, 24-hr maintenance",
-    occ: "Active — 5-star reviews, repeat tenants, stable leasing",
-    occFlag: "green",
-    rents: "Studio $749 | 1BR $899–$929 | 2BR $1,099–$1,175 | 3BR $1,499",
-    rentFlag: "green",
-    note: "🏆 Aspirational post-renovation comp — same Pasadena submarket, same vintage, fully repositioned. Managed by Greenline. Resident: 'most affordable luxury apartments in Pasadena area.' This is what The Pointe could achieve with a full unit renovation + strong management. No utilities bundled.",
-    noteFlag: "green",
-    effective: "$749–$1,499 asking — no utility bundling, no concessions noted",
-    allBillsPaid: false, aspirational: true,
-    phone: "(832) 219-6757",
-    extras: ["3cm granite countertops", "Vinyl wood-look flooring", "Kitchen backsplash + gooseneck faucet", "Vessel sinks + framed mirrors", "Crown & decorative wall molding", "Island pendant + drum chandelier lighting", "Resort pool + fitness center", "Pet park + picnic/grill area", "Children's playground", "On-site laundry", "24-hr emergency maintenance", "Se habla español"],
-  },
+const oakMix = [
+  {type:"1x1-450",sqft:450,mkt:500, total:1, occ:1, occPct:100,avgLeased:500, avail:0,rentGap:0,   note:"Single unit — essentially market"},
+  {type:"1x1-490",sqft:490,mkt:750, total:58,occ:55,occPct:94.83,avgLeased:625,avail:3,rentGap:-125,note:"Strong demand. $125/door below market. Biggest rent uplift pool."},
+  {type:"1x1-520",sqft:520,mkt:595, total:49,occ:43,occPct:87.76,avgLeased:656,avail:7,rentGap:+61, note:"⚠️ Market rate OUTDATED. True market ~$670–$720."},
+  {type:"2x1-1167",sqft:1167,mkt:1200,total:1,occ:1,occPct:100,avgLeased:600,avail:0,rentGap:-600,note:"🔴 PW EMPLOYEE @ $600 vs $1,200 market. Pull lease immediately."},
+  {type:"2x1-745",sqft:745,mkt:895, total:1, occ:1, occPct:100,avgLeased:850, avail:0,rentGap:-45, note:"Near market."},
+  {type:"2x1-750",sqft:750,mkt:895, total:50,occ:32,occPct:64,  avgLeased:879, avail:18,rentGap:-16,note:"🔴 BIGGEST PROBLEM: 18 of 50 vacant. Occupancy crisis, not pricing."},
+  {type:"2x1-756",sqft:756,mkt:895, total:1, occ:1, occPct:100,avgLeased:600, avail:0,rentGap:-295,note:"$295 below market. Renew to market at lease end."},
+  {type:"2x1-847",sqft:847,mkt:895, total:1, occ:1, occPct:100,avgLeased:895, avail:0,rentGap:0,   note:"At market."},
+  {type:"2x1-850",sqft:850,mkt:950, total:13,occ:7, occPct:53.85,avgLeased:941,avail:6,rentGap:-9, note:"🔴 53.8% occ — 6 of 13 vacant. Inspect all."},
+  {type:"2x1-950",sqft:950,mkt:1150,total:1, occ:1, occPct:100,avgLeased:1150,avail:0,rentGap:0,   note:"At market."},
+  {type:"STU-340",sqft:340,mkt:590, total:6, occ:4, occPct:66.67,avgLeased:580,avail:2,rentGap:-10, note:"2 studios vacant. Near market on occupied."},
 ];
 
+// ── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [tab, setTab] = useState("overview");
-  const [capR, setCapR] = useState(7.5);
-  const [expR, setExpR] = useState(58);
-  const [entryK, setEntryK] = useState(44);
-  const [renoK, setRenoK] = useState(11);
-  const [holdYrs, setHoldYrs] = useState(3);
+  const [prop, setProp] = useState("combined"); // "combined" | "pointe" | "oak"
+  const [tab,  setTab]  = useState("summary");
+  const [pointeAllocPct, setPointeAllocPct] = useState(Math.round(POINTE_UNITS/TOTAL_DOORS*100)); // default ~74%
 
-  const tabs = [
-    { id: "overview", label: "📋 Deal Overview" },
-    { id: "market", label: "📊 Market Reality" },
-    { id: "comps", label: "🏢 Comp Set" },
-    { id: "exit", label: "💰 Exit Model" },
-    { id: "risks", label: "⚠️ Risk Register" },
-    { id: "nextsteps", label: "✅ Next Steps" },
-    { id: "econ", label: "🏭 Economic Intel" },
+  // Exit model state — Pointe
+  const [pCapR, setPCapR] = useState(7.5);
+  const [pExpR, setPExpR] = useState(58);
+  const [pRenoK,setPRenoK]= useState(13);
+  const [pHold, setPHold] = useState(3);
+  // Exit model state — Oak
+  const [oCapR, setOCapR] = useState(7.5);
+  const [oExpR, setOExpR] = useState(50);
+  const [oRenoK,setORenoK]= useState(5);
+  const [oHold, setOHold] = useState(3);
+
+  const PROPS = [
+    {id:"combined", label:"📋 Combined Portfolio", color:"#0f172a", accent:"#3b82f6"},
+    {id:"pointe",   label:"🏢 The Pointe",          color:"#1e3a5f", accent:"#60a5fa"},
+    {id:"oak",      label:"🏠 Oak Shadows",          color:"#14532d", accent:"#4ade80"},
   ];
 
-  const rows = exitScenarios.map(s => calcRow(s.occ, s.rent, expR / 100, capR / 100));
+  const tabSets = {
+    combined: [
+      {id:"summary",   label:"📋 Summary"},
+      {id:"risks",     label:"⚠️ Risks"},
+      {id:"nextsteps", label:"✅ Next Steps"},
+    ],
+    pointe: [
+      {id:"overview",  label:"🏢 Overview"},
+      {id:"market",    label:"📊 Market"},
+      {id:"comps",     label:"🏢 Comps"},
+      {id:"exit",      label:"💰 Exit Model"},
+      {id:"risks",     label:"⚠️ Risks"},
+      {id:"nextsteps", label:"✅ Next Steps"},
+      {id:"econ",      label:"🏭 Economic Intel"},
+    ],
+    oak: [
+      {id:"overview",     label:"🏠 Overview"},
+      {id:"delinquency",  label:"💸 Delinquency"},
+      {id:"market",       label:"📊 Market"},
+      {id:"comps",        label:"🏢 Comps"},
+      {id:"exit",         label:"💰 Exit Model"},
+      {id:"risks",        label:"⚠️ Risks"},
+      {id:"nextsteps",    label:"✅ Next Steps"},
+      {id:"econ",         label:"🏭 Economic Intel"},
+    ],
+  };
+
+  const switchProp = (id) => { setProp(id); setTab(tabSets[id][0].id); };
+  const activeProp = PROPS.find(p=>p.id===prop);
+
+  const pRows = calcRows([
+    {label:"Today (65% / $912)",        occ:0.65,rent:912},
+    {label:"75% / $912",                occ:0.75,rent:912},
+    {label:"80% / $950 post-reno",      occ:0.80,rent:950},
+    {label:"85% / $975 post-reno",      occ:0.85,rent:975},
+    {label:"90% / $1,000 post-reno",    occ:0.90,rent:1000},
+    {label:"95% / $1,025 (bull case)",  occ:0.95,rent:1025},
+  ], POINTE_UNITS, pExpR, pCapR);
+
+  const oRows = calcRows([
+    {label:"Today (80.8% / $709 in-place)", occ:0.8077,rent:709.10},
+    {label:"85% / $762 (at market)",        occ:0.85,  rent:762.80},
+    {label:"90% / $800 (fill 2BR vacants)", occ:0.90,  rent:800},
+    {label:"93% / $840 (light improvements)",occ:0.93, rent:840},
+    {label:"95% / $875 (stabilized)",       occ:0.95,  rent:875},
+    {label:"95% / $895 (bull — 2BR at mkt)",occ:0.95,  rent:895},
+  ], OAK_UNITS, oExpR, oCapR);
+
+  const oakNOI = OAK.annualBilling * (1 - oExpR/100);
+
+  const ExitTable = ({rows, numUnits, entryPrice, renoK, hold, color}) => {
+    const allIn = entryPrice + renoK*1000;
+    return (
+      <div style={{overflowX:"auto",borderRadius:10,overflow:"hidden",boxShadow:"0 1px 6px rgba(0,0,0,0.08)",marginBottom:14}}>
+        <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+          <thead>
+            <tr style={{background:"#0f172a",color:"#fff"}}>
+              {["Scenario","NOI","Exit Value","$/Door","vs Entry","vs All-In","Ann. Return"].map(h=>(
+                <th key={h} style={{padding:"9px 9px",textAlign:h==="Scenario"?"left":"right",fontWeight:600,fontSize:10}}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r,i) => {
+              const ann = allIn>0&&hold>0?(Math.pow(r.perDoor/allIn,1/hold)-1)*100:0;
+              const aboveAllin = r.perDoor >= allIn;
+              const aboveEntry = r.perDoor >= entryPrice;
+              return (
+                <tr key={i} style={{background:aboveAllin?"#f0fdf4":i%2===0?"#fff":"#f8fafc",borderLeft:`4px solid ${aboveAllin?"#16a34a":aboveEntry?"#d97706":"#dc2626"}`}}>
+                  <td style={{padding:"7px 9px",fontWeight:600,fontSize:11}}>{r.label}</td>
+                  <td style={{padding:"7px 9px",textAlign:"right"}}>{fmtM(r.noi)}</td>
+                  <td style={{padding:"7px 9px",textAlign:"right"}}>{fmtM(r.val)}</td>
+                  <td style={{padding:"7px 9px",textAlign:"right",fontWeight:800,color:aboveAllin?"#15803d":aboveEntry?"#d97706":"#dc2626"}}>${Math.round(r.perDoor/1000)}K</td>
+                  <td style={{padding:"7px 9px",textAlign:"right",color:r.perDoor-entryPrice>=0?"#15803d":"#dc2626",fontWeight:600}}>{r.perDoor-entryPrice>=0?"+":""}{Math.round((r.perDoor-entryPrice)/1000)}K</td>
+                  <td style={{padding:"7px 9px",textAlign:"right",color:r.perDoor-allIn>=0?"#15803d":"#dc2626",fontWeight:600}}>{r.perDoor-allIn>=0?"+":""}{Math.round((r.perDoor-allIn)/1000)}K</td>
+                  <td style={{padding:"7px 9px",textAlign:"right",fontWeight:700,color:ann>=15?"#15803d":ann>=8?"#d97706":"#dc2626"}}>{ann>=0?ann.toFixed(1):"—"}%</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const EconContent = () => <>
+    <Section title="🟢 Tailwind #1 — Port Houston Ship Channel Expansion (Project 11)" color="#166634">
+      <Alrt type="green"><strong>Multi-decade federal infrastructure investment.</strong> Blue-collar jobs that match the tenant profile at both properties.</Alrt>
+      <Row label="Scope" value="530 ft → 700 ft channel widening" flag="green"/>
+      <Row label="Port-led dredging" value="Complete (Oct 2025)" flag="green"/>
+      <Row label="USACE remaining" value="Full completion 2029" flag="green"/>
+      <Row label="FY2026 federal allocation" value="$161M + $53.6M O&M" flag="green"/>
+      <Row label="Economic footprint" value="~1.5M Texas jobs / $439B state activity" flag="green"/>
+    </Section>
+    <Section title="🟢 Tailwind #2 — Houston Metro Job Growth" color="#166634">
+      <Row label="2026 job forecast" value="30,900 new jobs (Greater Houston Partnership)" flag="green"/>
+      <Row label="Total metro jobs by end of 2026" value="Record 3.5 million projected" flag="green"/>
+      <Row label="Population growth (2024)" value="+200,000 new residents" flag="green"/>
+    </Section>
+    <Section title="🟢 Tailwind #3 — Pasadena Industrial Anchors" color="#166634">
+      <Row label="Chevron Pasadena Refinery" value="Operational" flag="green"/>
+      <Row label="Pemex Deer Park Refinery" value="Operational — 275,000 bbl/day" flag="green"/>
+      <Row label="Shell Deer Park Manufacturing" value="Active 1,500-acre complex" flag="green"/>
+      <Row label="Bayport Terminal" value="Container volume growing with Project 11" flag="green"/>
+      <Row label="San Jacinto College" value="2025 Aspen Prize Finalist — trains Ship Channel workforce" flag="green"/>
+    </Section>
+    <Section title="🔴 Headwind — LyondellBasell Refinery Closure" color="#dc2626">
+      <Alrt type="red"><strong>Primary driver of the vacancy spike from 15.7% → 21.6% submarket vacancy.</strong></Alrt>
+      <Row label="Facility" value="LyondellBasell Houston Refinery — closed Q1 2025" flag="red"/>
+      <Row label="Direct layoffs" value="345–400+ (Texas Workforce Commission)" flag="red"/>
+      <Row label="Site future" value="Plastic recycling hub — equipment after 2027" flag="yellow" sub="Not near-term demand driver"/>
+    </Section>
+    <Section title="Economic Verdict" color="#1e3a5f">
+      <Alrt type="green"><strong>Long-term foundation is solid.</strong> Port expansion + Chevron, Pemex, Shell, and San Jacinto anchor blue-collar employment for both properties throughout any reasonable hold period.</Alrt>
+      <Alrt type="red"><strong>Near-term drag is real.</strong> LyondellBasell explains the vacancy spike. Oak Shadows at 80.77% proves local demand still exists — the problem is concentrated in distressed assets.</Alrt>
+      <Alrt type="yellow"><strong>Watch for further closures.</strong> A second major Ship Channel operator exit during hold could delay stabilization.</Alrt>
+    </Section>
+  </>;
+
+  const CompCard = ({c}) => (
+    <Section title={`${c.name} · ${c.addr} · ${c.dist}`}
+      color={c.primary?"#b45309":c.asp?"#6d28d9":c.noteF==="green"?"#166534":c.noteF==="red"?"#dc2626":"#1e3a5f"}>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:8}}>
+        {c.primary&&<Badge text="⭐ PRIMARY DIRECT COMP — ACROSS THE STREET" color="yellow"/>}
+        {c.asp&&<Badge text="⭐ ASPIRATIONAL" color="blue"/>}
+        <Badge text={`Built ${c.built}`} color="blue"/>
+        <Badge text={`${c.units} units`} color="blue"/>
+        {c.primary&&<Badge text="90%+ Occupied" color="green"/>}
+        {c.primary&&<Badge text="<5% Delinquency" color="green"/>}
+        {c.primary&&<Badge text="$13K/door Reno" color="yellow"/>}
+        {c.primary&&<Badge text="2BR+ Waiting List" color="green"/>}
+        {c.primary&&<Badge text="⚠️ 1BR Slow to Fill" color="red"/>}
+      </div>
+      <Row label="Occupancy" value={c.occ} flag={c.occF}/>
+      <Row label="Rents" value={c.rents} flag={c.noteF==="green"?"green":undefined}/>
+      <Row label="Effective Rents" value={c.eff} flag={c.occF}/>
+      {c.ph&&<Row label="Phone" value={c.ph}/>}
+      {c.floorplans&&<>
+        <div style={{fontSize:11,fontWeight:700,color:"#92400e",margin:"12px 0 6px"}}>Floor Plans — Confirmed from Property Visit</div>
+        <div style={{overflowX:"auto",marginBottom:10}}>
+          <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
+            <thead>
+              <tr style={{background:"#b45309",color:"#fff"}}>
+                {["Plan","Type","Sq Ft","Rent/Mo","$/Sqft","Demand Signal"].map(h=>(
+                  <th key={h} style={{padding:"6px 10px",textAlign:h==="Plan"||h==="Demand Signal"?"left":"right",fontSize:10,fontWeight:600}}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {c.floorplans.map((fp,i)=>{
+                const ppsf=(fp.rent/fp.sqft).toFixed(2);
+                const is1br=fp.bed.startsWith("1");
+                return (
+                  <tr key={fp.name} style={{background:i%2===0?"#fffbeb":"#fff",borderLeft:`4px solid ${is1br?"#ef4444":"#16a34a"}`}}>
+                    <td style={{padding:"7px 10px",fontWeight:800}}>{fp.name}</td>
+                    <td style={{padding:"7px 10px",textAlign:"right"}}>{fp.bed}</td>
+                    <td style={{padding:"7px 10px",textAlign:"right"}}>{fp.sqft} sf</td>
+                    <td style={{padding:"7px 10px",textAlign:"right",fontWeight:800,color:"#92400e"}}>${fp.rent.toLocaleString()}</td>
+                    <td style={{padding:"7px 10px",textAlign:"right",color:"#64748b"}}>${ppsf}/sf</td>
+                    <td style={{padding:"7px 10px"}}>
+                      <span style={{fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:10,
+                        background:is1br?"#fee2e2":"#dcfce7",
+                        color:is1br?"#dc2626":"#15803d"}}>
+                        {is1br?"⚠️ Slow to fill":"✅ Waiting list"}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        <div style={{background:"#fffbeb",border:"1px solid #fcd34d",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#92400e"}}>
+          <strong>🔑 Key Takeaway for The Pointe:</strong> Las Plazas confirms $949–$999 on 2BR and $1,299 on 3BR with a <em>waiting list</em> at $13K/door renovation — directly across the street. The 1BR weakness ($809–$829) is the only soft spot and mirrors submarket trends. <strong>Prioritize 2BR and 3BR renovation units first at The Pointe to hit cash flow fastest.</strong>
+        </div>
+      </>}
+      <div style={{marginTop:8,background:c.primary?"#fffbeb":c.asp?"#f5f3ff":c.noteF==="green"?"#f0fdf4":c.noteF==="red"?"#fef2f2":"#fffbeb",borderRadius:8,padding:"8px 11px",fontSize:11,color:c.primary?"#92400e":c.asp?"#4c1d95":c.noteF==="green"?"#166534":c.noteF==="red"?"#991b1b":"#92400e"}}>
+        {c.note}
+      </div>
+    </Section>
+  );
 
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", background: "#f1f5f9", minHeight: "100vh", padding: 20 }}>
-      <div style={{ maxWidth: 900, margin: "0 auto" }}>
+    <div style={{fontFamily:"system-ui,sans-serif",background:"#f1f5f9",minHeight:"100vh",padding:16}}>
+      <div style={{maxWidth:980,margin:"0 auto"}}>
 
-        {/* Header */}
-        <div style={{ background: "linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)", borderRadius: 14, padding: "22px 24px", marginBottom: 20, color: "#fff" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+        {/* ── GLOBAL HEADER ── */}
+        <div style={{background:"linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%)",borderRadius:14,padding:"18px 22px",marginBottom:14,color:"#fff"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:10}}>
             <div>
-              <div style={{ fontSize: 11, color: "#94a3b8", fontWeight: 600, letterSpacing: 1, textTransform: "uppercase", marginBottom: 4 }}>Internal Due Diligence Report · March 2026</div>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 800 }}>The Pointe & Oak Shadows</h1>
-              <p style={{ margin: "4px 0 0", fontSize: 13, color: "#94a3b8" }}>Pasadena, TX · 518 + Oak Shadows Units · Seller: VRK 38 / Thistle Creek</p>
+              <div style={{fontSize:10,color:"#94a3b8",fontWeight:600,letterSpacing:1,textTransform:"uppercase",marginBottom:3}}>Internal Due Diligence Report · March 2026</div>
+              <h1 style={{margin:0,fontSize:20,fontWeight:800}}>The Pointe & Oak Shadows</h1>
+              <p style={{margin:"3px 0 0",fontSize:12,color:"#94a3b8"}}>Pasadena, TX · <strong style={{color:"#60a5fa"}}>{TOTAL_DOORS} Doors</strong> · <strong style={{color:"#4ade80"}}>${fmt(CONTRACT_TOTAL)} Contract</strong> · <strong style={{color:"#fbbf24"}}>${fmt(PRICE_PER_DOOR)}/door</strong></p>
             </div>
-            <div style={{ background: "rgba(255,255,255,0.08)", borderRadius: 10, padding: "12px 18px", textAlign: "center" }}>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>Under Contract — Direct</div>
-              <div style={{ fontSize: 26, fontWeight: 900, color: "#4ade80" }}>$44K/door</div>
-              <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>+ buyer commissions</div>
+            <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+              {[
+                {label:"The Pointe",  val:`${POINTE_UNITS} units · ~65% occ`, color:"#60a5fa"},
+                {label:"Oak Shadows", val:`${OAK_UNITS} units · 80.77% occ`,  color:"#4ade80"},
+                {label:"Contract",    val:`$${(CONTRACT_TOTAL/1e6).toFixed(1)}M`,       color:"#fbbf24"},
+              ].map(({label,val,color})=>(
+                <div key={label} style={{background:"rgba(255,255,255,0.08)",borderRadius:10,padding:"8px 14px",textAlign:"center"}}>
+                  <div style={{fontSize:9,color:"#94a3b8",marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:13,fontWeight:900,color}}>{val}</div>
+                </div>
+              ))}
             </div>
           </div>
-          <div style={{ marginTop: 14, display: "flex", gap: 6, flexWrap: "wrap" }}>
-            <Badge text="Direct Contract — Seeds InvestCo" color="green" />
-            <Badge text="Active Federal Litigation on Title" color="red" />
-            <Badge text="55+/HOPA — Oak Shadows" color="red" />
-            <Badge text="21.6% Submarket Vacancy" color="yellow" />
-            <Badge text="10-Year Negative Absorption" color="yellow" />
-            <Badge text="Real Rent Upside ~$100–150/unit" color="green" />
-            <Badge text="7 Comps Analyzed" color="blue" />
+          <div style={{marginTop:10,display:"flex",gap:5,flexWrap:"wrap"}}>
+            <Badge text="Direct Contract — Seeds InvestCo" color="green"/>
+            <Badge text="Active Federal Litigation on Title" color="red"/>
+            <Badge text="HOPA — Age Data Required" color="red"/>
+            <Badge text="🚨 PW Employee in Unit 808 @ $600/mo" color="red"/>
+            <Badge text="$99.8K Delinquency" color="red"/>
           </div>
         </div>
 
-        {/* Tabs */}
-        <div style={{ display: "flex", gap: 6, marginBottom: 16, flexWrap: "wrap" }}>
-          {tabs.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ padding: "8px 14px", borderRadius: 8, border: "none", cursor: "pointer", fontSize: 12, fontWeight: 700,
-                background: tab === t.id ? "#0f172a" : "#fff",
-                color: tab === t.id ? "#fff" : "#475569",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.08)" }}>
+        {/* ── PROPERTY SELECTOR ── */}
+        <div style={{display:"flex",gap:8,marginBottom:12,flexWrap:"wrap"}}>
+          {PROPS.map(p=>(
+            <button key={p.id} onClick={()=>switchProp(p.id)}
+              style={{flex:"1 1 180px",padding:"12px 16px",borderRadius:10,border:prop===p.id?"none":"2px solid #e2e8f0",cursor:"pointer",fontWeight:800,fontSize:13,
+                background:prop===p.id?p.color:"#fff",color:prop===p.id?"#fff":"#475569",
+                boxShadow:prop===p.id?"0 4px 14px rgba(0,0,0,0.18)":"0 1px 3px rgba(0,0,0,0.06)",
+                transition:"all 0.15s"}}>
+              {p.label}
+              {p.id==="combined" && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#94a3b8":"#94a3b8"}}>Summary · Risks · Next Steps</div>}
+              {p.id==="pointe"   && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#93c5fd":"#94a3b8"}}>518 units · Est. $17M · ~65% occ</div>}
+              {p.id==="oak"      && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#86efac":"#94a3b8"}}>182 units · Est. $6M · 80.77% occ</div>}
+            </button>
+          ))}
+        </div>
+
+        {/* ── TAB BAR ── */}
+        <div style={{display:"flex",gap:5,marginBottom:14,flexWrap:"wrap"}}>
+          {tabSets[prop].map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)}
+              style={{padding:"7px 12px",borderRadius:8,border:"none",cursor:"pointer",fontSize:11,fontWeight:700,
+                background:tab===t.id?activeProp.color:"#fff",
+                color:tab===t.id?"#fff":"#475569",
+                boxShadow:"0 1px 3px rgba(0,0,0,0.08)"}}>
               {t.label}
             </button>
           ))}
         </div>
 
-        {/* DEAL OVERVIEW */}
-        {tab === "overview" && (
-          <>
-            <Section title="Transaction Summary" color="#0f172a">
-              <Row label="Seller" value="VRK 38 Apartments LLC / Thistle Creek" />
-              <Row label="Buyer" value="Seeds InvestCo (Direct Contract)" flag="green" />
-              <Row label="Contract Price" value="$44,000/door" flag="green" sub="Direct — wholesale assignment bypassed" />
-              <Row label="Contract Structure" value="Direct PSA with seller" flag="green" />
-              <Row label="Buyer Commissions" value="Additional — confirm total all-in cost/door" flag="yellow" />
-              <Row label="The Pointe Units" value="518 units" />
-              <Row label="Oak Shadows Units" value="TBD — pending rent roll upload" flag="yellow" />
-              <Row label="Combined Portfolio" value="Two-property acquisition" />
-            </Section>
-            <Section title="The Pointe — Asset Snapshot" color="#1e3a5f">
-              <Row label="Location" value="Pasadena, TX (Harris County)" />
-              <Row label="Vintage" value="Early 1970s — Class C workforce housing" />
-              <Row label="Current Occupancy" value="~65%" flag="red" />
-              <Row label="Current Avg Rent" value="$912/unit" sub="vs. $1,097 submarket asking avg" />
-              <Row label="Current NOI" value="Effectively zero — distressed" flag="red" />
-              <Row label="Condition" value="Unrenovated — deferred maintenance present" flag="red" />
-              <Row label="Rent Upside (realistic)" value="~$100–150/unit post-renovation" flag="green" sub="Based on effective comp rents, not asking rents" />
-              <Row label="Rent Ceiling (Red Pines model)" value="$899–$929 / 1BR | $1,099–$1,175 / 2BR" flag="green" sub="Requires full gut renovation — not partial refresh" />
-              <Row label="Estimated Renovation Capex" value="$8,000–$15,000/unit" flag="yellow" sub="~$4.1M–$7.8M total for 518 units" />
-              <Row label="All-In Basis (mid-reno)" value="~$55–56K/door" flag="yellow" sub="$44K + $11K avg renovation" />
-            </Section>
-            <Section title="Oak Shadows — Key Concerns" color="#7c2d12">
-              <Alert type="red">
-                <strong>⚠️ Senior Housing Designation — Not Disclosed in Original Pitch.</strong> Oak Shadows is a 55+/HOPA-designated community. Cannot reposition without decertification. Fair Housing Act exposure is real.
-              </Alert>
-              <Row label="Designation" value="55+ / HOPA Senior Housing" flag="red" />
-              <Row label="Fair Housing Act obligations" value="Yes — significant" flag="red" />
-              <Row label="Repositioning restrictions" value="Severe — cannot convert to general occupancy without HOPA decertification" flag="red" />
-              <Row label="Current rent roll" value="Not yet uploaded — Priority #1" flag="red" />
-            </Section>
-            <Section title="Title & Litigation" color="#7c3aed">
-              <Alert type="red">
-                <strong>Active Federal Litigation:</strong> Computershare v. Thistle Creek is on title. The $500K escrow is contradicted between the two LOIs. Must be resolved before closing.
-              </Alert>
-              <Row label="Active litigation" value="Computershare v. Thistle Creek" flag="red" />
-              <Row label="Escrow — Pointe LOI" value="$500K for The Pointe only" />
-              <Row label="Escrow — Oak Shadows LOI" value="$500K shared both properties" flag="red" sub="Direct contradiction — needs resolution" />
-              <Row label="Title report status" value="Pending — obtain immediately" flag="red" />
-            </Section>
-          </>
-        )}
+        {/* ════════════════════════════════════════
+            COMBINED — SUMMARY
+        ════════════════════════════════════════ */}
+        {prop==="combined" && tab==="summary" && (()=>{
+          const oakAllocPct   = 100 - pointeAllocPct;
+          const pointeAlloc   = CONTRACT_TOTAL * pointeAllocPct / 100;
+          const oakAlloc      = CONTRACT_TOTAL * oakAllocPct   / 100;
+          const pointePPD     = pointeAlloc / POINTE_UNITS;
+          const oakPPD        = oakAlloc    / OAK_UNITS;
+          const blendedPPD    = CONTRACT_TOTAL / TOTAL_DOORS;
+          const pointePremium = ((pointePPD / blendedPPD) - 1) * 100;
+          const oakPremium    = ((oakPPD    / blendedPPD) - 1) * 100;
+          return <>
+          <KpiGrid items={[
+            {label:"Contract Price",     value:`${(CONTRACT_TOTAL/1e6).toFixed(1)}M`,    color:"#16a34a"},
+            {label:"Blended Price/Door", value:`${fmt(blendedPPD)}`,                     color:"#16a34a"},
+            {label:"Total Doors",        value:`${TOTAL_DOORS}`,                          color:"#0f172a"},
+            {label:"The Pointe Occ.",    value:"~65%",                                    color:"#dc2626"},
+            {label:"Oak Shadows Occ.",   value:"80.77%",                                  color:"#166534"},
+            {label:"Oak Monthly Billing",value:`${fmt(OAK.totalBillingMonthly)}`,        color:"#b45309"},
+            {label:"Oak Delinquency",    value:`${fmt(DEL.total)}`,                      color:"#dc2626"},
+            {label:"Oak Rev. Gap/Yr",    value:`${fmt((OAK.totalMarketMonthly-OAK.totalBillingMonthly)*12)}`, color:"#d97706"},
+          ]}/>
 
-        {/* MARKET */}
-        {tab === "market" && (
-          <>
-            <Alert type="red">
-              <strong>The market is moving against this deal.</strong> These numbers come from Jeff's own CoStar report (pulled 3/2/2026).
-            </Alert>
-            <Section title="Submarket Fundamentals — CoStar Report #85664871" color="#dc2626">
-              <Row label="Current submarket vacancy" value="21.6%" flag="red" sub="Up from 15.7% just 12 months ago — accelerating" />
-              <Row label="Absorption trend" value="Negative for 10 consecutive years (since 2016)" flag="red" />
-              <Row label="Market occupancy" value="78.4% and declining" flag="red" />
-              <Row label="Market cap rate" value="6.71%" sub="CoStar comp set — for stabilized assets" />
-              <Row label="Stabilized sale comps" value="~$90K/door" sub="Stabilized, 90%+ occupied assets only" />
-              <Row label="Concessions" value="Widespread — 1–4 weeks free common" flag="red" />
-            </Section>
-            <Section title="Rent Reality Check" color="#1e3a5f">
-              <Alert type="yellow">
-                The $1,097 submarket average is an <strong>asking rent</strong>. With widespread concessions, effective rents are $50–$150 lower. Critically, two of our new comps — Willow Tree (1BR $830) and Las Plazas (1BR $809–$829) — are achieving BELOW The Pointe's current $912 avg, even after partial renovation. This is a significant finding.
-              </Alert>
-              <Row label="The Pointe current avg rent" value="$912/unit" />
-              <Row label="Willow Tree 1BR (partially renovated, 1974 vintage)" value="$830" flag="red" sub="Below The Pointe — confirms rent premium requires FULL renovation" />
-              <Row label="Las Plazas 1BR (post-$1.35M partial reno, 1964 vintage)" value="$809–$829" flag="red" sub="Below The Pointe — $17K/unit partial reno didn't move the needle much" />
-              <Row label="Red Pines 1BR (full gut renovation)" value="$899–$929" flag="green" sub="Aspirational ceiling — requires Red Pines-quality finishes" />
-              <Row label="Submarket asking avg (CoStar)" value="$1,097/unit" sub="Asking only — inflated by concessions" />
-              <Row label="Effective market rents (after concessions)" value="~$950–$1,000" flag="yellow" />
-              <Row label="Realistic post-reno target for The Pointe" value="$975–$1,050" flag="yellow" sub="Achievable only with full Red Pines-quality renovation" />
-            </Section>
-            <Section title="Why the 24-Month Exit Is Aggressive" color="#b45309">
-              <Row label="Starting occupancy" value="65% — roughly 181 vacant units" flag="red" />
-              <Row label="Units to lease up (to 90%)" value="~130 additional units" flag="yellow" />
-              <Row label="Submarket absorption trend" value="Negative — market losing units annually" flag="red" />
-              <Row label="Competitor concessions" value="1–4 weeks free in same submarket" flag="red" />
-              <Row label="Realistic stabilization timeline" value="36–48 months" flag="yellow" sub="Not Jeff's 24-month claim" />
-              <Row label="NOI required for $100K/door exit" value="~$3.47M/year" flag="red" sub="From near-zero today at 6.71% cap" />
-            </Section>
-          </>
-        )}
+          {/* ── ALLOCATION SLIDER ── */}
+          <div style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:18,boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{fontSize:13,fontWeight:800,color:"#0f172a"}}>📐 Purchase Price Allocation</span>
+              <span style={{fontSize:11,color:"#94a3b8"}}>Drag to model independent sale scenarios</span>
+            </div>
+            <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>
+              The $23M contract is a single transaction. Adjust the allocation below to model how price is attributed to each property — relevant for separate financing, future individual sales, or tax basis allocation.
+            </div>
 
-        {/* COMPS */}
-        {tab === "comps" && (
-          <>
-            <Alert type="yellow">
-              All comps have been renovated to varying degrees. <strong>The Pointe has not been renovated.</strong> Effective rents are the correct comparison — not asking rents.
-            </Alert>
-            <Alert type="purple">
-              <strong>🆕 Two new comps added: Willow Tree Apartments (SMI Realty) and Las Plazas Apartments (Crexi for-sale listing).</strong> Both reveal a critical finding: partial renovation in this submarket does NOT push 1BR rents above The Pointe's current $912 avg. Full gut renovation is required to move rents meaningfully higher.
-            </Alert>
-
-            {comps.map((c, i) => (
-              <Section key={i}
-                title={`${c.name} · ${c.address} · ${c.distance} from The Pointe`}
-                color={c.aspirational ? "#6d28d9" : c.noteFlag === "green" ? "#166534" : c.noteFlag === "red" ? "#dc2626" : "#1e3a5f"}>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
-                  {c.aspirational && <Badge text="⭐ ASPIRATIONAL POST-RENO COMP" color="blue" />}
-                  {c.allBillsPaid && <Badge text="ALL BILLS PAID" color="yellow" />}
-                  {(c.name.includes("Willow Tree") || c.name.includes("Las Plazas")) && <Badge text="🆕 NEW COMP" color="blue" />}
-                  {c.name.includes("Las Plazas") && <Badge text="FOR SALE — Crexi" color="yellow" />}
-                  <Badge text={`Built ${c.built}`} color="blue" />
-                  <Badge text={`${c.units} units`} color="blue" />
-                  {c.aspirational && <Badge text="Greenline Management" color="green" />}
-                </div>
-                <Row label="Manager" value={c.manager} />
-                <Row label="Renovation Status" value={c.renovated} flag={c.aspirational ? "green" : "yellow"} />
-                <Row label="Current Occupancy / Availability" value={c.occ} flag={c.occFlag} />
-                <Row label="Asking Rents" value={c.rents} flag={c.rentFlag} />
-                <Row label="Effective Rents (adjusted)" value={c.effective} flag={c.occFlag} />
-                {c.phone && <Row label="Phone" value={c.phone} />}
-                {c.extras && (
-                  <div style={{ marginTop: 12 }}>
-                    <div style={{ fontSize: 12, fontWeight: 700, color: c.aspirational ? "#4c1d95" : "#334155", marginBottom: 6 }}>
-                      {c.aspirational ? "Renovation Finishes — Blueprint for The Pointe" : "Notable Features"}
-                    </div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                      {c.extras.map((a, j) => (
-                        <span key={j} style={{ background: c.aspirational ? "#f5f3ff" : "#f1f5f9", border: `1px solid ${c.aspirational ? "#c4b5fd" : "#e2e8f0"}`, borderRadius: 6, padding: "3px 9px", fontSize: 11, color: c.aspirational ? "#4c1d95" : "#475569", fontWeight: 600 }}>{a}</span>
-                      ))}
-                    </div>
+            {/* Property cards */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
+              {[
+                {label:"🏢 The Pointe",  units:POINTE_UNITS, alloc:pointeAlloc, ppd:pointePPD, pct:pointeAllocPct,  premium:pointePremium, color:"#1e3a5f", bg:"#eff6ff"},
+                {label:"🏠 Oak Shadows", units:OAK_UNITS,    alloc:oakAlloc,    ppd:oakPPD,    pct:oakAllocPct,    premium:oakPremium,    color:"#14532d", bg:"#f0fdf4"},
+              ].map(({label,units,alloc,ppd,pct,premium,color,bg})=>(
+                <div key={label} style={{background:bg,borderRadius:10,padding:"14px 16px",border:`2px solid ${color}22`}}>
+                  <div style={{fontSize:13,fontWeight:800,color,marginBottom:8}}>{label}</div>
+                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                    {[
+                      {k:"Allocation %",  v:`${pct.toFixed(1)}%`},
+                      {k:"Total $",       v:`${(alloc/1e6).toFixed(2)}M`},
+                      {k:"Price / Door",  v:`${fmt(ppd)}`},
+                      {k:"vs Blended",    v:`${premium>=0?"+":""}${premium.toFixed(1)}%`},
+                    ].map(({k,v})=>(
+                      <div key={k} style={{background:"#fff",borderRadius:7,padding:"7px 10px"}}>
+                        <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,textTransform:"uppercase"}}>{k}</div>
+                        <div style={{fontSize:14,fontWeight:900,color}}>{v}</div>
+                      </div>
+                    ))}
                   </div>
-                )}
-                <div style={{ marginTop: 10, background: c.aspirational ? "#f5f3ff" : c.noteFlag === "green" ? "#f0fdf4" : c.noteFlag === "red" ? "#fef2f2" : "#fffbeb",
-                  borderRadius: 8, padding: "9px 12px", fontSize: 12,
-                  color: c.aspirational ? "#4c1d95" : c.noteFlag === "green" ? "#166534" : c.noteFlag === "red" ? "#991b1b" : "#92400e" }}>
-                  {c.note}
+                  <div style={{marginTop:8,fontSize:10,color:"#64748b"}}>
+                    {units} doors · ${fmt(ppd)}/door · {pct.toFixed(1)}% of contract
+                  </div>
                 </div>
-              </Section>
+              ))}
+            </div>
+
+            {/* Slider */}
+            <div style={{position:"relative",padding:"0 0 6px"}}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
+                <span style={{fontSize:11,fontWeight:700,color:"#1e3a5f"}}>← More to The Pointe</span>
+                <span style={{fontSize:11,fontWeight:700,color:"#14532d"}}>More to Oak Shadows →</span>
+              </div>
+              {/* Visual bar */}
+              <div style={{position:"relative",height:28,borderRadius:14,overflow:"hidden",background:"#e2e8f0",marginBottom:8}}>
+                <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pointeAllocPct}%`,background:"linear-gradient(90deg,#1e3a5f,#3b82f6)",transition:"width 0.1s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:8}}>
+                  {pointeAllocPct>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{pointeAllocPct.toFixed(0)}%</span>}
+                </div>
+                <div style={{position:"absolute",right:0,top:0,height:"100%",width:`${oakAllocPct}%`,background:"linear-gradient(90deg,#16a34a,#4ade80)",transition:"width 0.1s",display:"flex",alignItems:"center",paddingLeft:8}}>
+                  {oakAllocPct>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{oakAllocPct.toFixed(0)}%</span>}
+                </div>
+              </div>
+              <input type="range" min={30} max={85} step={0.5} value={pointeAllocPct}
+                onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
+                style={{width:"100%",accentColor:"#1e3a5f"}}/>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginTop:2}}>
+                <span>30% Pointe / 70% Oak</span>
+                <span style={{color:"#64748b",fontWeight:700}}>◆ {pointeAllocPct.toFixed(0)}% / {oakAllocPct.toFixed(0)}%</span>
+                <span>85% Pointe / 15% Oak</span>
+              </div>
+            </div>
+
+            {/* Insight callouts */}
+            <div style={{marginTop:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#1e3a5f",borderLeft:"3px solid #3b82f6"}}>
+                <strong>The Pointe breakeven:</strong> At ${fmt(pointePPD)}/door, you need to exit at {((pointePPD/1000)*1.0).toFixed(0)}K+ per door to recover basis. Stabilized comps at ~$90K/door give {((90000-pointePPD)/1000).toFixed(0)}K/door of margin.
+              </div>
+              <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#14532d",borderLeft:"3px solid #16a34a"}}>
+                <strong>Oak Shadows implied equity:</strong> At ${fmt(oakPPD)}/door entry, current billing at a 7.5% cap and 50% expense ratio implies ~${fmt(Math.round(OAK.annualBilling*0.5/0.075/OAK_UNITS))}K/door in value — <strong>${fmt(Math.round(OAK.annualBilling*0.5/0.075/OAK_UNITS - oakPPD))} of Day-1 equity per door.</strong>
+              </div>
+            </div>
+          </div>
+
+          <Section title="Transaction Summary" color="#0f172a">
+            <Row label="Seller" value="VRK 38 Apartments LLC / Thistle Creek"/>
+            <Row label="Buyer" value="Seeds InvestCo (Direct Contract)" flag="green"/>
+            <Row label="Contract Price" value="$23,000,000" flag="green" sub="Renegotiated post-walkthrough — down from $44K/door"/>
+            <Row label="Blended Price Per Door" value={`${fmt(blendedPPD)}/door`} flag="green"/>
+            <Row label="The Pointe — allocated" value={`${(pointeAlloc/1e6).toFixed(2)}M · ${fmt(pointePPD)}/door`} sub={`${pointeAllocPct.toFixed(1)}% of contract`} flag={pointePPD<35000?"green":"yellow"}/>
+            <Row label="Oak Shadows — allocated" value={`${(oakAlloc/1e6).toFixed(2)}M · ${fmt(oakPPD)}/door`} sub={`${oakAllocPct.toFixed(1)}% of contract`} flag={oakPPD<35000?"green":"yellow"}/>
+            <Row label="Stabilized comp benchmark" value="~$90K/door" sub="For 90%+ occupied assets — significant discount to stabilized value"/>
+          </Section>
+          <Section title="The Pointe — Snapshot" color="#1e3a5f">
+            <Row label="Units / Vintage" value="518 units · Early 1970s · Class C"/>
+            <Row label="Current Occupancy" value="~65%" flag="red" sub="~181 vacant units"/>
+            <Row label="Current Avg Rent" value="$912/unit" sub="vs $1,097 submarket asking avg"/>
+            <Row label="Current NOI" value="Effectively zero — distressed" flag="red"/>
+            <Row label="Renovation required for rent growth" value="$12–18K/unit full gut renovation" flag="yellow"/>
+            <Row label="All-in basis (mid-reno $14K)" value="~$46.9K/door" sub="$32.9K entry + $14K reno" flag="yellow"/>
+            <Row label="Rent ceiling post-reno" value="$899–$929/1BR · $1,099–$1,175/2BR" flag="green" sub="Red Pines model — same submarket"/>
+          </Section>
+          <Section title="Oak Shadows — Snapshot" color="#166534">
+            <Row label="Units / Vintage" value="182 units · Workforce housing"/>
+            <Row label="Current Occupancy" value="80.77% — 147 occupied" flag="green"/>
+            <Row label="Monthly Billing (confirmed)" value={`$${fmt(OAK.totalBillingMonthly)}`} flag="yellow" sub="Rent $104,237 + Parking $2,225"/>
+            <Row label="Annual Billing Run-Rate" value={`$${fmt(OAK.annualBilling)}`} flag="yellow"/>
+            <Row label="Est. Annual NOI @ 45% expense" value={`$${fmt(OAK.annualBilling*0.55)}`} flag="green" sub="Before collections haircut — T-12 required"/>
+            <Row label="Delinquency" value={`$${fmt(DEL.total)}`} flag="red" sub="93.7% of one month billing · $41K in 90+ day bucket"/>
+            <Row label="Key vacancy issue" value="18 of 50 two-bed/750sf units vacant (64% occ)" flag="red"/>
+            <Row label="🚨 Management conflict" value="Parawest employee in Unit 808 @ $600 vs $1,200 market" flag="red"/>
+          </Section>
+          <Section title="Title, Litigation & Legal" color="#7c3aed">
+            <Alrt type="red"><strong>Active Federal Litigation:</strong> Computershare v. Thistle Creek. $500K escrow contradiction between LOIs. Full title report required before closing.</Alrt>
+            <Alrt type="red"><strong>HOPA / 55+ Compliance:</strong> Oak Shadows rent roll shows working-age workforce profile. No age data in OneSite export. Legal liability transfers to buyer at closing if designation is active and unenforced.</Alrt>
+          </Section>
+        </>; })()}
+
+        {/* ════════════════════════════════════════
+            COMBINED — RISKS
+        ════════════════════════════════════════ */}
+        {prop==="combined" && tab==="risks" && <>
+          <Section title="🔴 Critical Risks — Must Resolve Before Closing" color="#dc2626">
+            {[
+              ["Federal Litigation on Title (Both)","Computershare v. Thistle Creek is active. $500K escrow contradicted between the two LOIs. Full title report required immediately."],
+              ["🚨 Parawest Employee in Unit 808 — Oak Shadows","DEL report confirms 'PW EMPLOYEE' in 2x1-1167sf at $600 vs $1,200 market. Management self-dealing. Pull lease, identify employee, assess disclosure. Assume Day-1 management transition to Greenline."],
+              ["HOPA/55+ Compliance — Oak Shadows","Rent roll shows general-occupancy workforce profile. No age data in export. Active violation = FHA liability transfers to buyer at closing. Age survey required before closing."],
+              ["$99.8K Delinquency — Oak Shadows","93.7% delinquency-to-billing ratio. $41K in 90+ day bucket — largely uncollectable PRIORMGMT carryover. Apply 5–8% collections haircut to NOI until T-12 confirmed."],
+              ["2x1-750 Vacancy — Oak Shadows","18 of 50 units vacant (64% occ). Near-market in-place rents confirm this is NOT a pricing problem. Inspect all 18 before closing."],
+              ["T-12 Financials — Both Properties","No verified trailing 12-month cash receipts for either property. All NOI projections are theoretical."],
+            ].map(([t,b],i)=><Alrt key={i} type="red"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+          <Section title="🟡 Significant Risks" color="#b45309">
+            {[
+              ["The Pointe Stabilization Timeline","21.6% submarket vacancy + negative 10-yr absorption. 130 units to absorb. Jeff's 24-month timeline is aggressive — underwrite 36–48 months."],
+              ["Partial Renovation Won't Move Rents (The Pointe)","Willow Tree and Las Plazas prove partial capex doesn't push rents above current Pointe avg. Full gut renovation required to access Red Pines rent levels."],
+              ["$9K+ PRIORMGMT Write-offs — Oak Shadows","Inherited bad debt will hit NOI in Year 1. Quantify in T-12 request."],
+              ["Bulk Lockout Activity Jan 2026 — Oak Shadows","16 units received simultaneous lockout notices 01/07–01/08. Some will convert to additional vacancies — monitor near-term pipeline."],
+              ["2x1-850 Vacancy — Oak Shadows","6 of 13 units vacant (53.85%). Inspect all 6."],
+            ].map(([t,b],i)=><Alrt key={i} type="yellow"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+          <Section title="🟢 Genuine Upside Factors" color="#166634">
+            {[
+              ["Entry Price Creates Massive Margin","$32.9K/door vs ~$90K stabilized comp benchmark. Even a partial stabilization generates significant equity."],
+              ["Oak Shadows Cash-Flowing from Day 1","$106,462/mo confirmed billing. ~$638K–$702K NOI/yr at 45–50% expense ratio. Positive carry while The Pointe is renovated."],
+              ["Oak Shadows: Fill 18 Vacants = $193K/yr","18 vacant 2BR/750sf at $895 market = $16,110/mo = $193K/yr incremental. No renovation needed."],
+              ["Oak Shadows: Unit 808 Fix = $7,200/yr Instant","Terminate PW employee lease, re-lease at $1,200 market = $600/mo = $7,200/yr instant NOI."],
+              ["Red Pines Proves The Pointe's Ceiling","$899–$929/1BR and $1,099–$1,175/2BR with full gut reno in the same Pasadena submarket."],
+            ].map(([t,b],i)=><Alrt key={i} type="green"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+        </>}
+
+        {/* ════════════════════════════════════════
+            COMBINED — NEXT STEPS
+        ════════════════════════════════════════ */}
+        {prop==="combined" && tab==="nextsteps" && <>
+          <Section title="Immediate — Before Any Further Commitments" color="#dc2626">
+            {[
+              ["Attorney Review — Title & Litigation (Both)","Full title report. Resolve $500K escrow contradiction between LOIs. Quantify Computershare v. Thistle Creek exposure."],
+              ["Pull Unit 808 Complete Lease — Oak Shadows","PW EMPLOYEE confirmed in DEL report. Get lease, term, employee identity, assess disclosure. This triggers assumed Day-1 management transition."],
+              ["HOPA Age Survey — Oak Shadows","Request full tenant DOB records from Parawest. #1 unresolved legal item for Oak Shadows."],
+              ["Greenline Management Proposal (Both Properties)","The PW employee disclosure accelerates this. Get a Day-1 transition proposal from Greenline for both The Pointe and Oak Shadows."],
+              ["Inspect 18 Vacant 2x1-750 Units — Oak Shadows","Walk every vacant 2BR/750. Condition or management/marketing problem?"],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fee2e2",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#dc2626",minWidth:20}}>!</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
             ))}
+          </Section>
+          <Section title="Due Diligence — Within 2 Weeks" color="#b45309">
+            {[
+              ["T-12 Financials — Both Properties","Actual cash receipts, eviction cost history, write-off history. Oak Shadows: cross-reference $99.8K delinquency against cash received."],
+              ["Physical Inspection — The Pointe","20–30% unit sample + third-party PCA. Quantify deferred maintenance and renovation scope."],
+              ["Inspect 6 Vacant 2x1-850 Units — Oak Shadows","Condition survey on all 6 vacant 850sf units."],
+              ["Tour Red Pines in Person","(832) 219-6757 — 3823 Red Bluff Rd. Walk renovated units. This is The Pointe's renovation spec sheet and Oak Shadows' aspirational ceiling."],
+              ["PSA Full Review — Both Properties","Closing timeline, earnest money, inspection period, seller representations."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fed7aa",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#d97706",minWidth:20}}>{i+1}</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+          <Section title="Pre-Close — Underwriting" color="#1e3a5f">
+            {[
+              ["The Pointe Final Proforma","T-12 verified + capex from PCA + Red Pines as bull case rent ceiling."],
+              ["Oak Shadows Final Proforma","T-12 + collections-adjusted effective revenue + 2BR/750 absorption timeline + PRIORMGMT write-off budget."],
+              ["Capital Stack Confirmation","The Pointe: $12–18K/unit full renovation. Oak Shadows: targeted capex on vacant 2BRs + deferred maintenance only."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #dbeafe",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#2563eb",minWidth:20}}>→</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+        </>}
 
-            <Section title="Comp Set Summary — Full 9-Comp Rent Range Analysis" color="#0f172a">
-              <Alert type="red">
-                <strong>Critical Finding #1 — Partial Reno Doesn't Move Rents:</strong> Willow Tree ($830/1BR) and Las Plazas ($809–$829/1BR) are BELOW The Pointe's current $912 avg despite renovation capex. Partial reno will not justify rent growth.
-              </Alert>
-              <Alert type="yellow">
-                <strong>Critical Finding #2 — Full Reno Requires Strong Management:</strong> Vista Azul has Red Pines-identical finishes (3cm granite, vessel sinks, crown molding) yet is running half-month-free concessions with 106 active vacancies. Quarters on Red Bluff (same vintage, partial update) is at 95% occupancy. Management execution is the differentiator, not finishes alone.
-              </Alert>
-              <Row label="Las Plazas 1BR (1964, $1.35M partial reno)" value="$809–$829" flag="red" sub="Below The Pointe avg — active for-sale on Crexi" />
-              <Row label="Willow Tree 1BR (1974, partially updated)" value="$830" flag="red" sub="Below The Pointe avg — SMI Realty" />
-              <Row label="Veranda Village (floor)" value="~$549–$800" flag="red" sub="Distressed — management issues" />
-              <Row label="Quay Point" value="~$660–$900" flag="yellow" sub="14% vacancy, price drops active" />
-              <Row label="Vista Azul 1BR (1971, fully renovated — RED BLUFF RD)" value="$849–$925 w/ concessions" flag="yellow" sub="106 units vacant — management quality drag" />
-              <Row label="Quarters on Red Bluff 1BR (1971, partial update — 95% occ)" value="$840–$975" flag="green" sub="Best occ in comp set — JAW Equity" />
-              <Row label="Silver Club" value="~$950–$1,050" flag="green" sub="45 units, professionally managed" />
-              <Row label="Terracita effective rent (ex-utilities)" value="~$815–$1,050" flag="green" sub="91.5% occ, fully renovated, all-bills-paid" />
-              <Row label="Red Pines 1BR (full gut — Red Bluff Rd, 0.53 mi from Vista Azul)" value="$899–$929" flag="green" sub="⭐ Aspirational — no utility bundling, no concessions" />
-              <Row label="Red Pines 2BR" value="$1,099–$1,175" flag="green" sub="⭐ 2BR ceiling for The Pointe" />
-              <Row label="The Pointe current avg rent" value="$912" sub="Already above 3 partially-renovated peers" />
-              <Row label="Realistic post-FULL-reno + strong mgmt target" value="$950–$1,050" flag="green" sub="Quarters + Red Pines prove it — Vista Azul proves mgmt matters" />
-            </Section>
-          </>
-        )}
+        {/* ════════════════════════════════════════
+            THE POINTE — OVERVIEW
+        ════════════════════════════════════════ */}
+        {prop==="pointe" && tab==="overview" && <>
+          <KpiGrid items={[
+            {label:"Units",         value:"518",           color:"#0f172a"},
+            {label:"Occupancy",     value:"~65%",          color:"#dc2626"},
+            {label:"Vacant Units",  value:"~181",          color:"#dc2626"},
+            {label:"Avg Rent",      value:"$912",          color:"#b45309"},
+            {label:"Submarket Avg", value:"$1,097",        color:"#475569", sub:"asking — effective lower"},
+            {label:"Entry Price",   value:`$${fmt(POINTE_PRICE)}`, color:"#16a34a"},
+            {label:"Per Door",      value:`$${fmt(PRICE_PER_DOOR)}`, color:"#16a34a"},
+            {label:"Current NOI",   value:"~$0",           color:"#dc2626", sub:"effectively distressed"},
+          ]}/>
+          <Section title="Asset Snapshot" color="#1e3a5f">
+            <Row label="Location" value="Pasadena, TX (Harris County)"/>
+            <Row label="Vintage" value="Early 1970s — Class C workforce housing"/>
+            <Row label="Current Occupancy" value="~65%" flag="red" sub="~181 vacant units"/>
+            <Row label="Current Avg Rent" value="$912/unit" sub="vs $1,097 submarket asking avg"/>
+            <Row label="Current NOI" value="Effectively zero — distressed" flag="red"/>
+            <Row label="All-in basis (mid-reno $14K)" value="~$46.9K/door" flag="yellow" sub="$32.9K entry + $14K reno"/>
+            <Row label="Stabilized comp benchmark" value="~$90K/door" flag="green" sub="For 90%+ occupied — significant upside margin"/>
+          </Section>
+          <Section title="Renovation Strategy — Las Plazas Sets the Target" color="#1e3a5f">
+            <Alrt type="green"><strong>Las Plazas (directly across the street) is the proof of concept.</strong> $13K/door renovation, 90%+ occupied, &lt;5% delinquency, waiting list on all 2BR+. This is the renovation spec and the rent target for The Pointe.</Alrt>
+            <Alrt type="yellow"><strong>⚠️ 1BR units are the weak spot at Las Plazas — and across the submarket.</strong> Willow Tree ($830) and Las Plazas ($809–$829) both struggle to fill 1BRs. Prioritize 2BR and 3BR renovation first at The Pointe to maximize early cash flow.</Alrt>
+            <Row label="Target renovation spec" value="$13,000/unit — Las Plazas standard" flag="yellow" sub="Confirmed achievable: 90%+ occ directly across the street"/>
+            <Row label="Post-reno 1BR target" value="$809–$829/unit" flag="yellow" sub="Las Plazas confirmed — but 1BRs slow to fill submarket-wide"/>
+            <Row label="Post-reno 2BR target" value="$949–$999/unit" flag="green" sub="Las Plazas confirmed — waiting list at this price point"/>
+            <Row label="Post-reno 3BR target" value="$1,299/unit" flag="green" sub="Las Plazas confirmed — waiting list"/>
+            <Row label="Total capex (518 units · $13K)" value={`${fmt(518*13000)}`} flag="yellow"/>
+            <Row label="All-in basis post reno" value="~$45.9K/door" flag="green" sub="$32.9K entry + $13K reno vs ~$90K stabilized benchmark"/>
+            <Row label="Renovation priority order" value="2BR first → 3BR → 1BR last" flag="yellow" sub="Maximize waiting-list demand; defer slow-moving 1BRs"/>
+          </Section>
+          <Section title="Stabilization Challenge" color="#dc2626">
+            <Alrt type="red"><strong>The Pointe is the turnaround play. Oak Shadows is the cash engine.</strong> This property requires capital, time, and operational execution.</Alrt>
+            <Row label="Units to absorb (65% → 90%)" value="~130 additional units" flag="red"/>
+            <Row label="Submarket vacancy" value="21.6% — up from 15.7% in 12 months" flag="red"/>
+            <Row label="Absorption trend" value="Negative for 10 consecutive years (since 2016)" flag="red"/>
+            <Row label="Jeff's claimed timeline" value="24 months" flag="red" sub="Not supported by submarket data"/>
+            <Row label="Realistic stabilization timeline" value="36–48 months" flag="yellow"/>
+          </Section>
+        </>}
 
-        {/* EXIT MODEL */}
-        {tab === "exit" && (
-          <>
-            <div style={{ display: "flex", gap: 12, marginBottom: 12, flexWrap: "wrap" }}>
-              {[
-                { label: `Exit Cap Rate: ${capR.toFixed(1)}%`, min: 5.5, max: 9.0, step: 0.1, val: capR, set: setCapR, lo: "5.5% (optimistic)", hi: "9% (distressed)" },
-                { label: `Expense Ratio: ${expR}%`, min: 45, max: 65, step: 1, val: expR, set: setExpR, lo: "45% (well-run)", hi: "65% (distressed)" },
-                { label: `Entry Price: ${entryK}K/door`, min: 35, max: 60, step: 1, val: entryK, set: setEntryK, lo: "$35K (below ask)", hi: "$60K (above ask)" },
-                { label: `Renovation: ${renoK}K/unit`, min: 5, max: 20, step: 1, val: renoK, set: setRenoK, lo: "$5K (light)", hi: "$20K (full gut)" },
-              ].map(({ label, min, max, step, val, set, lo, hi }) => (
-                <div key={label} style={{ background: "#fff", borderRadius: 10, padding: "12px 16px", boxShadow: "0 1px 4px rgba(0,0,0,0.08)", flex: "1 1 180px", minWidth: 180 }}>
-                  <label style={{ fontSize: 11, fontWeight: 700, color: "#475569", display: "block", marginBottom: 6 }}>{label}</label>
-                  <input type="range" min={min} max={max} step={step} value={val} onChange={e => set(step < 1 ? parseFloat(e.target.value) : parseInt(e.target.value))} style={{ width: "100%" }} />
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8" }}><span>{lo}</span><span>{hi}</span></div>
-                </div>
-              ))}
-            </div>
-            <div style={{ background: "#0f172a", borderRadius: 10, padding: "12px 18px", marginBottom: 14, display: "flex", gap: 24, flexWrap: "wrap" }}>
-              {[
-                { label: "Entry Price", val: `${entryK}K/door` },
-                { label: "Renovation", val: `${renoK}K/unit` },
-                { label: "All-In Basis", val: `${entryK + renoK}K/door`, highlight: true },
-                { label: "Total Capex (518 units)", val: `${((entryK + renoK) * 518 / 1000).toFixed(1)}M` },
-                { label: "Break-Even Exit $/Door", val: `${entryK + renoK}K` },
-              ].map(({ label, val, highlight }) => (
-                <div key={label} style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 10, color: "#94a3b8", marginBottom: 2 }}>{label}</div>
-                  <div style={{ fontSize: highlight ? 20 : 15, fontWeight: 900, color: highlight ? "#4ade80" : "#fff" }}>{val}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ background: "#f5f3ff", border: "1px solid #c4b5fd", borderRadius: 10, padding: "10px 16px", marginBottom: 14, fontSize: 13, color: "#4c1d95" }}>
-              <strong>⭐ Red Pines Benchmark:</strong> Full gut renovation supports <strong>$899–$929 / 1BR</strong> and <strong>$1,099–$1,175 / 2BR</strong>. <strong>⚠️ Willow Tree / Las Plazas Warning:</strong> Partial renovation only achieves $809–$830 / 1BR — BELOW current Pointe rents. Budget for a full renovation or do not underwrite rent growth.
-            </div>
-            <div style={{ overflowX: "auto", borderRadius: 10, overflow: "hidden", boxShadow: "0 1px 6px rgba(0,0,0,0.08)", marginBottom: 14 }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+        {/* THE POINTE — MARKET */}
+        {prop==="pointe" && tab==="market" && <>
+          <Alrt type="red"><strong>The submarket is moving against The Pointe specifically.</strong> Numbers from Jeff's CoStar report (3/2/2026).</Alrt>
+          <Section title="Submarket Fundamentals — CoStar Report #85664871" color="#dc2626">
+            <Row label="Current submarket vacancy" value="21.6%" flag="red" sub="Up from 15.7% in 12 months — accelerating"/>
+            <Row label="Absorption trend" value="Negative for 10 consecutive years (since 2016)" flag="red"/>
+            <Row label="Market cap rate" value="6.71%" sub="For stabilized assets only"/>
+            <Row label="Stabilized sale comps" value="~$90K/door" sub="90%+ occupied"/>
+            <Row label="Concessions widespread" value="1–4 weeks free across submarket" flag="red"/>
+          </Section>
+          <Section title="Rent Reality Check" color="#1e3a5f">
+            <Row label="The Pointe current avg rent" value="$912/unit"/>
+            <Row label="Submarket asking avg" value="$1,097" sub="Effective rents $50–$150 lower"/>
+            <Row label="Willow Tree 1BR (partial reno, 1974)" value="$830" flag="red" sub="Below The Pointe avg despite renovation"/>
+            <Row label="Las Plazas 1BR (post-$1.35M reno, 2025)" value="$809–$829" flag="red" sub="$17K/unit reno didn't move the needle"/>
+            <Row label="Quarters on Red Bluff (95% occ, 1971)" value="$840–$975 / 1BR" flag="green" sub="Same vintage, same submarket — proof of concept"/>
+            <Row label="Red Pines 1BR (full gut renovation)" value="$899–$929" flag="green" sub="Aspirational ceiling — full reno required"/>
+            <Row label="Red Pines 2BR (full gut renovation)" value="$1,099–$1,175" flag="green"/>
+            <Row label="Realistic post-reno target" value="$975–$1,050 blended" flag="yellow" sub="Full Red Pines-quality renovation required"/>
+          </Section>
+          <Section title="Key Risk: 24-Month Exit Timeline" color="#b45309">
+            <Row label="Starting vacancy" value="~181 units (35%)" flag="red"/>
+            <Row label="Target occupancy" value="90% (requires ~130 new leases)" flag="yellow"/>
+            <Row label="Net absorption in submarket" value="Negative 10-year trend" flag="red"/>
+            <Row label="Jeff's claim" value="24 months to stabilization" flag="red"/>
+            <Row label="Underwrite at" value="36–48 months" flag="yellow"/>
+          </Section>
+        </>}
+
+        {/* THE POINTE — COMPS */}
+        {prop==="pointe" && tab==="comps" && <>
+          <Alrt type="yellow">All comps are renovated. <strong>The Pointe has not been renovated.</strong> Effective rents are the correct comparison benchmark.</Alrt>
+          {pointeComps.map((c,i)=><CompCard key={i} c={c}/>)}
+        </>}
+
+        {/* THE POINTE — EXIT MODEL */}
+        {prop==="pointe" && tab==="exit" && <>
+          <Alrt type="purple">Exit model for <strong>The Pointe — 518 units.</strong> Entry price based on pro-rata share of $23M contract.</Alrt>
+          <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+            {[
+              {label:`Exit Cap Rate: ${pCapR.toFixed(1)}%`,min:5.5,max:9.0,step:0.1,val:pCapR,set:setPCapR},
+              {label:`Expense Ratio: ${pExpR}%`,           min:45, max:65, step:1,  val:pExpR,set:setPExpR},
+              {label:`Renovation: $${pRenoK}K/unit`,       min:5,  max:20, step:1,  val:pRenoK,set:setPRenoK},
+            ].map(({label,min,max,step,val,set})=>(
+              <div key={label} style={{background:"#fff",borderRadius:10,padding:"11px 13px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",flex:"1 1 160px"}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:5}}>{label}</label>
+                <input type="range" min={min} max={max} step={step} value={val} onChange={e=>set(step<1?parseFloat(e.target.value):parseInt(e.target.value))} style={{width:"100%"}}/>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"#0f172a",borderRadius:10,padding:"11px 16px",marginBottom:12,display:"flex",gap:20,flexWrap:"wrap"}}>
+            {[
+              {label:"Entry (pro-rata)",val:`$${fmt(POINTE_PRICE)}`},
+              {label:"Per Door",        val:`$${fmt(PRICE_PER_DOOR)}`},
+              {label:"Renovation",      val:`$${pRenoK}K/unit`},
+              {label:"All-In / Door",   val:`$${Math.round(PRICE_PER_DOOR/1000+pRenoK)}K`,hi:true},
+              {label:"Total Capex",     val:`$${fmt(POINTE_UNITS*pRenoK*1000)}`},
+            ].map(({label,val,hi})=>(
+              <div key={label} style={{textAlign:"center"}}>
+                <div style={{fontSize:9,color:"#94a3b8",marginBottom:2}}>{label}</div>
+                <div style={{fontSize:hi?18:13,fontWeight:900,color:hi?"#4ade80":"#fff"}}>{val}</div>
+              </div>
+            ))}
+          </div>
+          <ExitTable rows={pRows} numUnits={POINTE_UNITS} entryPrice={PRICE_PER_DOOR} renoK={pRenoK} hold={pHold} color="#1e3a5f"/>
+          <div style={{background:"#fff",borderRadius:10,padding:"11px 13px",marginBottom:10}}>
+            <label style={{fontSize:11,fontWeight:700,color:"#475569"}}>Hold Period: {pHold} yr{pHold!==1?"s":""}</label>
+            <input type="range" min={1} max={10} step={1} value={pHold} onChange={e=>setPHold(parseInt(e.target.value))} style={{width:"100%",marginTop:4}}/>
+          </div>
+        </>}
+
+        {/* THE POINTE — RISKS */}
+        {prop==="pointe" && tab==="risks" && <>
+          <Section title="🔴 Critical Risks" color="#dc2626">
+            {[
+              ["Federal Litigation on Title","Computershare v. Thistle Creek is active. $500K escrow contradicted between LOIs. Full title report required."],
+              ["Stabilization Timeline Risk","21.6% submarket vacancy + 10-year negative absorption. 130 units to absorb. Underwrite 36–48 months, not 24."],
+              ["T-12 Financials","No verified trailing 12-month financials. Distressed NOI must be confirmed — currently effectively zero."],
+            ].map(([t,b],i)=><Alrt key={i} type="red"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+          <Section title="🟡 Significant Risks" color="#b45309">
+            {[
+              ["Partial Renovation Won't Move Rents","Two comps prove this — Willow Tree and Las Plazas both below Pointe avg after recent capex. Full gut reno required."],
+              ["Renovation Cost Overrun","$12–18K/unit budget is wide. Third-party PCA required to pin down actual scope before closing."],
+              ["Concessions Required to Fill","Submarket concessions of 1–4 weeks free are widespread. Budget for 4–6 weeks of concessions per unit during lease-up."],
+              ["Management Execution","Vista Azul proves even a fully renovated asset fails with bad management (106 vacancies). Greenline is the right operator."],
+            ].map(([t,b],i)=><Alrt key={i} type="yellow"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+          <Section title="🟢 Upside Factors" color="#166634">
+            {[
+              ["Entry Price Provides Massive Buffer","$32.9K/door vs ~$90K stabilized benchmark. Downside protection is exceptional."],
+              ["Red Pines Proves the Ceiling","$899–$929/1BR, $1,099–$1,175/2BR — full gut reno, same submarket, no concessions."],
+              ["Oak Shadows Carries the Carry","Oak Shadows cash flow covers operating costs while The Pointe stabilizes."],
+            ].map(([t,b],i)=><Alrt key={i} type="green"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+        </>}
+
+        {/* THE POINTE — NEXT STEPS */}
+        {prop==="pointe" && tab==="nextsteps" && <>
+          <Section title="Immediate" color="#dc2626">
+            {[
+              ["Attorney Review — Title & Litigation","Full title report. Resolve $500K escrow contradiction. Quantify Computershare v. Thistle Creek."],
+              ["Third-Party PCA — Physical Condition Assessment","20–30% unit sample walk + independent condition report. Pin down renovation scope and true capex budget."],
+              ["Greenline Management Proposal","Get a Day-1 management transition proposal from Greenline (Red Pines operator) for The Pointe specifically."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fee2e2",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#dc2626",minWidth:20}}>!</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+          <Section title="Due Diligence — Within 2 Weeks" color="#b45309">
+            {[
+              ["T-12 Financials","Confirm The Pointe's actual revenue, expense breakdown, and vacancy trend over last 12 months."],
+              ["Tour Red Pines in Person","(832) 219-6757. Walk renovated units. Photograph finishes. This is the renovation spec sheet."],
+              ["Renovation Contractor Bids","Get 2–3 bids on a per-unit full-gut renovation scope based on PCA findings."],
+              ["PSA Full Review","Closing timeline, earnest money, inspection period, seller representations for The Pointe."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fed7aa",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#d97706",minWidth:20}}>{i+1}</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+        </>}
+
+        {/* THE POINTE — ECONOMIC INTEL */}
+        {prop==="pointe" && tab==="econ" && <EconContent/>}
+
+        {/* ════════════════════════════════════════
+            OAK SHADOWS — OVERVIEW
+        ════════════════════════════════════════ */}
+        {prop==="oak" && tab==="overview" && <>
+          <Alrt type="red"><strong>🚨 Unit 808 DEL comment confirms "PW EMPLOYEE."</strong> Parawest staff member in largest unit at $600 vs $1,200 market. Day-1 management transition should be assumed.</Alrt>
+          <KpiGrid items={[
+            {label:"Total Units",      value:"182",                               color:"#0f172a"},
+            {label:"Occupied",         value:"147",                               color:"#166534"},
+            {label:"Vacant",           value:"36",                                color:"#dc2626"},
+            {label:"Occupancy",        value:"80.77%",                            color:"#166534"},
+            {label:"Avg Mkt Rent",     value:"$762.80",                           color:"#1e3a5f"},
+            {label:"Avg In-Place",     value:"$709.10",                           color:"#b45309"},
+            {label:"Monthly Billing",  value:`$${fmt(OAK.totalBillingMonthly)}`,  color:"#b45309"},
+            {label:"Delinquency",      value:`$${fmt(DEL.total)}`,                color:"#dc2626"},
+          ]}/>
+          <Section title="Confirmed Financials — OneSite 01/08/2026" color="#166534">
+            <Row label="Total Units" value="182" flag="green" sub="Confirmed — OneSite Page 12 summary"/>
+            <Row label="Occupied (no NTV)" value="143 units" flag="green"/>
+            <Row label="Occupied (NTV)" value="4 units" flag="yellow" sub="Notice to vacate — will add to vacancy"/>
+            <Row label="Vacant (not leased)" value="32 units" flag="red"/>
+            <Row label="Avg Market Rent" value="$762.80/unit" sub="Note: 1x1-520 market rate is outdated"/>
+            <Row label="Avg In-Place Rent" value="$709.10/unit" flag="yellow" sub="$53.70 below own market avg"/>
+            <Row label="Total Monthly Billing" value={`$${fmt(OAK.totalBillingMonthly)}`} sub="Rent $104,237 + Parking $2,225" flag="yellow"/>
+            <Row label="Annual Billing Run-Rate" value={`$${fmt(OAK.annualBilling)}`}/>
+            <Row label="Annual Revenue Gap to Market" value={`$${fmt((OAK.totalMarketMonthly-OAK.totalBillingMonthly)*12)}`} flag="red" sub="Market potential minus actual billing"/>
+            <Row label="Est. NOI @ 45% expense" value={`$${fmt(OAK.annualBilling*0.55)}/yr`} flag="green" sub="Before 5–8% collections haircut"/>
+          </Section>
+          <Section title="Unit Mix — Key Issues" color="#1e3a5f">
+            <div style={{overflowX:"auto"}}>
+              <table style={{width:"100%",borderCollapse:"collapse",fontSize:11}}>
                 <thead>
-                  <tr style={{ background: "#0f172a", color: "#fff" }}>
-                    {["Scenario", "NOI", "Exit Value", "$/Door", `vs ${entryK}K Entry`, `vs ${entryK+renoK}K All-In`].map(h => (
-                      <th key={h} style={{ padding: "10px 12px", textAlign: h === "Scenario" ? "left" : "right", fontWeight: 600, fontSize: 12, whiteSpace: "nowrap" }}>{h}</th>
+                  <tr style={{background:"#0f172a",color:"#fff"}}>
+                    {["Plan","Sqft","Mkt","Total","Occ","Avail","Occ%","Leased","Gap","Note"].map(h=>(
+                      <th key={h} style={{padding:"7px 8px",textAlign:h==="Plan"||h==="Note"?"left":"right",fontSize:10,fontWeight:600}}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
-                  {exitScenarios.map((s, i) => {
-                    const r = rows[i];
-                    const allIn = (entryK + renoK) * 1000;
-                    const isProfit = r.perDoor >= allIn;
-                    const annReturn = allIn > 0 && holdYrs > 0
-                      ? (Math.pow(r.perDoor / allIn, 1 / holdYrs) - 1) * 100
-                      : 0;
+                  {oakMix.map((r,i)=>{
+                    const gC=r.rentGap<=-200?"#dc2626":r.rentGap<-50?"#d97706":r.rentGap>=0?"#15803d":"#475569";
+                    const oC=r.occPct<60?"#dc2626":r.occPct<80?"#d97706":"#15803d";
                     return (
-                      <tr key={s.label} style={{ background: isProfit ? "#f0fdf4" : i % 2 === 0 ? "#fff" : "#f8fafc",
-                        borderLeft: `4px solid ${r.perDoor >= (entryK+renoK)*1000 ? "#16a34a" : r.perDoor >= entryK*1000 ? "#d97706" : "#dc2626"}` }}>
-                        <td style={{ padding: "9px 12px", fontWeight: 600, fontSize: 12 }}>{s.label}</td>
-                        <td style={{ padding: "9px 12px", textAlign: "right" }}>${(r.noi / 1000000).toFixed(2)}M</td>
-                        <td style={{ padding: "9px 12px", textAlign: "right" }}>${(r.value / 1000000).toFixed(1)}M</td>
-                        <td style={{ padding: "9px 12px", textAlign: "right", fontWeight: 800,
-                          color: r.perDoor >= (entryK+renoK)*1000 ? "#15803d" : r.perDoor >= entryK*1000 ? "#d97706" : "#dc2626" }}>
-                          ${Math.round(r.perDoor / 1000)}K
-                        </td>
-                        <td style={{ padding: "9px 12px", textAlign: "right", color: (r.perDoor - entryK*1000) >= 0 ? "#15803d" : "#dc2626", fontWeight: 600 }}>
-                          {(r.perDoor - entryK*1000) >= 0 ? "+" : ""}{Math.round((r.perDoor - entryK*1000) / 1000)}K
-                        </td>
-                        <td style={{ padding: "9px 12px", textAlign: "right", color: (r.perDoor - (entryK+renoK)*1000) >= 0 ? "#15803d" : "#dc2626", fontWeight: 600 }}>
-                          {(r.perDoor - (entryK+renoK)*1000) >= 0 ? "+" : ""}{Math.round((r.perDoor - (entryK+renoK)*1000) / 1000)}K
-                        </td>
-                        <td style={{ padding: "9px 12px", textAlign: "right", fontWeight: 700,
-                          color: annReturn >= 15 ? "#15803d" : annReturn >= 8 ? "#d97706" : "#dc2626" }}>
-                          {annReturn >= 0 ? annReturn.toFixed(1) : "—"}%
-                        </td>
+                      <tr key={r.type} style={{background:r.occPct<65?"#fff5f5":i%2===0?"#fff":"#f8fafc",borderLeft:`4px solid ${r.occPct<65?"#dc2626":r.avail>5?"#d97706":"#16a34a"}`}}>
+                        <td style={{padding:"7px 8px",fontWeight:700}}>{r.type}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right"}}>{r.sqft}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",fontWeight:700}}>${r.mkt}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right"}}>{r.total}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right"}}>{r.occ}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",color:r.avail>3?"#dc2626":"#d97706",fontWeight:700}}>{r.avail}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",fontWeight:800,color:oC}}>{r.occPct.toFixed(0)}%</td>
+                        <td style={{padding:"7px 8px",textAlign:"right"}}>${r.avgLeased}</td>
+                        <td style={{padding:"7px 8px",textAlign:"right",fontWeight:800,color:gC}}>{r.rentGap>=0?"+":""}{r.rentGap}</td>
+                        <td style={{padding:"7px 8px",fontSize:10,color:"#475569",maxWidth:160}}>{r.note}</td>
                       </tr>
                     );
                   })}
                 </tbody>
               </table>
             </div>
-            <div style={{ background: "#fff", borderRadius: 10, padding: "12px 16px", fontSize: 12, color: "#475569", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-              518 units | Cap rate: {capR}% | Expense ratio: {expR}% | Entry: ${entryK}K/door | Renovation: ${renoK}K/unit | All-in: ${entryK+renoK}K/door | Hold: {holdYrs} yr{holdYrs !== 1 ? "s" : ""} | Ann. return = (Exit $/door ÷ All-in)^(1/yrs) − 1 | No interim cash flow or debt included
-            </div>
-          </>
-        )}
+          </Section>
+          <Section title="Management — Parawest Community Development" color="#dc2626">
+            <Alrt type="red"><strong>🚨 Self-dealing confirmed.</strong> Parawest placed a staff member in Unit 808 (2x1-1167sf) at $600/mo vs $1,200 market. Day-1 management transition to Greenline should be assumed at closing, not evaluated post-close.</Alrt>
+            <Row label="Unit 808 conflict" value="PW Employee @ $600 vs $1,200 market" flag="red" sub="Confirmed via DEL report comment 01/07/2026"/>
+            <Row label="Delinquency rate" value="93.7% of one month billing outstanding" flag="red"/>
+            <Row label="2x1-750 vacancy" value="18 of 50 units vacant despite near-market rents" flag="red" sub="Suggests leasing inactivity"/>
+            <Row label="Recommendation" value="Day-1 transition to Greenline — bilingual, same submarket" flag="red"/>
+          </Section>
+        </>}
 
-        {/* RISKS */}
-        {tab === "risks" && (
-          <>
-            <Section title="🔴 Critical Risks — Must Resolve Before Closing" color="#dc2626">
-              {[
-                ["Federal Litigation on Title", "Computershare v. Thistle Creek is active. $500K escrow is contradicted between the two LOIs. Get a full title report immediately."],
-                ["Oak Shadows HOPA/55+ Designation", "Not disclosed in original pitch. Cannot reposition without decertification. Fair Housing Act exposure is real. Legal review required before pricing into business plan."],
-                ["T-12 Financials Not Yet Reviewed", "Without verified trailing 12-month financials, all NOI projections are theoretical. Do not close without audited T-12."],
-              ].map(([title, body], i) => (
-                <Alert key={i} type="red"><strong>{title}:</strong> {body}</Alert>
-              ))}
-            </Section>
-            <Section title="🟡 Significant Risks — Underwrite Carefully" color="#b45309">
-              {[
-                ["Partial Renovation Will Not Drive Rent Growth", "NEW FINDING: Willow Tree (1974, partially updated) achieves $830/1BR. Las Plazas (1964, $1.35M capex 2016–2019) achieves $809–$829/1BR. Both are BELOW The Pointe's current $912 avg. A partial renovation strategy will not generate the rent premium needed to justify the capex. Budget for a full Red Pines-quality gut renovation ($12–18K/unit) or do not underwrite rent growth."],
-                ["Market Absorption", "Submarket has had negative absorption for 10 consecutive years and vacancy is accelerating (15.7% → 21.6% in 12 months)."],
-                ["Renovation Capex Unknown", "Without a physical inspection, the $8–15K/unit estimate is a range. Properties with deferred maintenance can carry hidden infrastructure costs."],
-                ["Comp Concessions Compress Effective Rents", "Every comp in this submarket is offering concessions. Model effective rents $50–100 below asking during the first 18 months."],
-                ["Terracita 'All Bills Paid' Mirage", "Normalize Terracita by $100–125/month before using its rents as a benchmark. The Pointe will not include utilities."],
-              ].map(([title, body], i) => (
-                <Alert key={i} type="yellow"><strong>{title}:</strong> {body}</Alert>
-              ))}
-            </Section>
-            <Section title="🟢 Genuine Upside Factors" color="#166534">
-              {[
-                ["Entry Price Protects Downside", "At $44K/door direct, you've bought at today's distressed value. Limited downside at entry."],
-                ["Red Pines Proves the Ceiling", "Red Pines achieves $899–$929/1BR and $1,099–$1,175/2BR with a full renovation in the same submarket. No utilities included. That is the achievable target."],
-                ["The Pointe's Rents Are Already Above Partially-Renovated Peers", "At $912 avg, The Pointe already outperforms two partially-renovated comps (Willow Tree at $830, Las Plazas at $809–$829). This confirms the property is not a rent turnaround story — it's an occupancy and renovation story."],
-                ["Workforce Housing Demand Is Durable", "Port of Houston, Hobby Airport, and industrial corridors provide stable employment. Workforce demand has a floor Class A assets don't."],
-                ["Greenline Management Blueprint", "Red Pines' operator is active in this exact submarket with demonstrated results. Worth contacting for a management proposal."],
-              ].map(([title, body], i) => (
-                <Alert key={i} type="green"><strong>{title}:</strong> {body}</Alert>
-              ))}
-            </Section>
-          </>
-        )}
-
-        {/* NEXT STEPS */}
-        {tab === "nextsteps" && (
-          <>
-            <Section title="Immediate — Before Any Further Commitments" color="#dc2626">
-              {[
-                ["Attorney Review — Title & Litigation", "Obtain full title report. Resolve the $500K escrow contradiction between LOIs. Quantify Computershare v. Thistle Creek exposure."],
-                ["Oak Shadows Legal Review", "Confirm HOPA/55+ designation. Understand decertification requirements and timeline if conversion is contemplated."],
-                ["Upload Oak Shadows Rent Roll", "Current occupancy, tenant age profile, in-place rents, and lease expiration schedule."],
-              ].map(([title, body], i) => (
-                <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid #fee2e2", alignItems: "flex-start" }}>
-                  <span style={{ fontWeight: 900, fontSize: 16, color: "#dc2626", minWidth: 24 }}>!</span>
-                  <div><div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 2 }}>{title}</div>
-                    <div style={{ fontSize: 12, color: "#475569" }}>{body}</div></div>
-                </div>
-              ))}
-            </Section>
-            <Section title="Due Diligence — Within 2 Weeks" color="#b45309">
-              {[
-                ["T-12 Financials — The Pointe", "Verified trailing 12-month income/expense statement. Cross-reference against CoStar vacancy data."],
-                ["Physical Inspection — Both Properties", "Unit-by-unit walk on a representative sample (20–30%). Get a third-party property condition assessment (PCA)."],
-                ["PSA Review — Full Contract Terms", "Confirm closing timeline, earnest money, inspection period, and seller representations."],
-                ["Commission Confirmation", "Confirm total buyer commissions and calculate true all-in cost per door."],
-                ["Tour Red Pines in Person", "Visit 3823 Red Bluff Rd, Pasadena TX. Walk renovated units, photograph finishes. This becomes your renovation spec sheet. Call (832) 219-6757."],
-                ["Tour Las Plazas & Walk Units", "3940 S Shaver St — call (346) 980-7106. Understand what $1.35M in renovation (2016–2019) looks like on the ground and how their rents compare to The Pointe. Key data point for capex-to-rent relationship."],
-                ["Contact Greenline Apartment Management", "Red Pines' operator (greenlinemanagement.com). Get a management proposal for The Pointe. Understand fee structure and bilingual leasing capabilities."],
-                ["Evaluate Las Plazas Assumable Loan", "Las Plazas has an assumable Fannie Mae loan at 3.35% — worth understanding the structure even if you don't acquire the property, as it signals what institutional debt looks like in this submarket."],
-              ].map(([title, body], i) => (
-                <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid #fed7aa", alignItems: "flex-start" }}>
-                  <span style={{ fontWeight: 900, fontSize: 16, color: "#d97706", minWidth: 24 }}>{i + 1}</span>
-                  <div><div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 2 }}>{title}</div>
-                    <div style={{ fontSize: 12, color: "#475569" }}>{body}</div></div>
-                </div>
-              ))}
-            </Section>
-            <Section title="Pre-Close — Underwriting Refinement" color="#1e3a5f">
-              {[
-                ["Build Final Proforma", "Using verified T-12, confirmed capex from PCA, effective rents (not asking rents). Use Red Pines as the rent ceiling in the bull case. Do NOT model rent growth without a fully funded full-renovation budget."],
-                ["Management Company Selection", "Red Pines (Greenline) and Terracita both prove strong management delivers in this submarket. Willow Tree's mixed reviews and Las Plazas' ongoing vacancy show that adequate-but-not-great management leaves value on the table."],
-                ["Capital Stack Confirmation", "Ensure renovation capex is funded at close. Partial renovation will not move rents above current levels — only full Red Pines-quality renovation justifies the rent growth thesis. Budget $12–18K/unit minimum."],
-              ].map(([title, body], i) => (
-                <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid #dbeafe", alignItems: "flex-start" }}>
-                  <span style={{ fontWeight: 900, fontSize: 16, color: "#2563eb", minWidth: 24 }}>→</span>
-                  <div><div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 2 }}>{title}</div>
-                    <div style={{ fontSize: 12, color: "#475569" }}>{body}</div></div>
-                </div>
-              ))}
-            </Section>
-          </>
-        )}
-
-        {/* ECONOMIC INTEL */}
-        {tab === "econ" && (
-          <>
-            <Section title="🟢 Tailwind #1 — Port Houston Ship Channel Expansion (Project 11)" color="#166534">
-              <Alert type="green"><strong>The single most important economic development story for this submarket.</strong> A multi-decade federal infrastructure investment supporting thousands of blue-collar jobs that match your exact tenant profile.</Alert>
-              <Row label="Scope" value="Widened Galveston Bay channel from 530 ft → 700 ft" flag="green" />
-              <Row label="Port-led dredging status" value="Complete (Oct 2025)" flag="green" />
-              <Row label="USACE remaining work" value="On track for full completion 2029" flag="green" />
-              <Row label="FY2026 federal allocation" value="$161M for Project 11 + $53.6M O&M" flag="green" />
-              <Row label="Economic footprint" value="~1.5M jobs in Texas / $439B state economic activity" flag="green" />
-            </Section>
-            <Section title="🟢 Tailwind #2 — Houston Metro Job Growth" color="#166534">
-              <Row label="2026 job forecast (Greater Houston Partnership)" value="30,900 new jobs" flag="green" sub="Below 50K recent annual avg — moderating but positive" />
-              <Row label="Total metro jobs by end of 2026" value="Record 3.5 million projected" flag="green" />
-              <Row label="Population growth (2024)" value="+200,000 new residents" flag="green" />
-              <Row label="Recession odds (WSJ survey, Oct 2025)" value="33% — not alarming, not benign" flag="yellow" />
-            </Section>
-            <Section title="🟢 Tailwind #3 — Pasadena's Industrial Anchor Employers" color="#166534">
-              <Row label="Chevron Pasadena Refinery" value="Operational" flag="green" />
-              <Row label="Pemex Deer Park Refinery" value="Operational — 275,000 bbl/day" flag="green" />
-              <Row label="Shell Deer Park Manufacturing" value="Active 1,500-acre complex" flag="green" />
-              <Row label="Bayport Terminal" value="Container volume growing with Project 11" flag="green" />
-              <Row label="San Jacinto College" value="2025 Aspen Prize Finalist — trains Ship Channel workforce pipeline" flag="green" />
-            </Section>
-            <Section title="🔴 Headwind — LyondellBasell Refinery Closure (~400+ Jobs Lost)" color="#dc2626">
-              <Alert type="red"><strong>Almost certainly a primary driver of the vacancy spike from 15.7% → 21.6%.</strong> This is not a management problem at The Pointe — it is a demand problem caused by a specific employer exit.</Alert>
-              <Row label="Facility" value="LyondellBasell Houston Refinery — closed Q1 2025" flag="red" />
-              <Row label="Direct layoffs" value="345–400+ confirmed via Texas Workforce Commission" flag="red" />
-              <Row label="Site future" value="Plastic recycling hub planned — equipment install after 2027" flag="yellow" sub="Not near-term demand" />
-            </Section>
-            <Section title="🟡 Macro Caution — Petrochemical Sector Softening" color="#b45309">
-              <Alert type="yellow">The LyondellBasell closure is not isolated. Monitor for additional closures among smaller Ship Channel operators.</Alert>
-              <Row label="American Chemistry Council sentiment" value="'Rough patch' in Q3 2025" flag="yellow" />
-              <Row label="Houston exposure" value="Diversified beyond refining — petrochems, logistics, health, tech" flag="green" />
-            </Section>
-            <Section title="📋 Site Visit Checklist — Economic Ground Truth" color="#0f172a">
-              {[
-                ["Drive the Ship Channel corridor", "Note active vs. idle plants. Flaring, truck traffic, contractor vehicles = employment health."],
-                ["Tour Red Pines in person", "3823 Red Bluff Rd, Pasadena TX — (832) 219-6757. Walk renovated units. Ask where tenants work. Most important comp visit."],
-                ["Tour Las Plazas in person", "3940 S Shaver St — (346) 980-7106. See what $1.35M in 2016–2019 renovation looks like. Ask management why they're selling and about tenant employment profile."],
-                ["Ask Terracita's management where tenants work", "91.5% occupied. Their tenant employment profile tells you which employers are driving real demand right now."],
-                ["Check Bayport Terminal activity", "Container volume growing post-Project 11. Logistics/port jobs are your most stable tenant source."],
-                ["Talk to local property managers", "Ask: where are tenants coming from? What industries? Real-time submarket intelligence CoStar can't provide."],
-              ].map(([title, body], i) => (
-                <div key={i} style={{ display: "flex", gap: 12, padding: "10px 0", borderBottom: "1px solid #e2e8f0", alignItems: "flex-start" }}>
-                  <span style={{ fontWeight: 900, fontSize: 15, color: "#0f172a", minWidth: 24 }}>→</span>
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#1e293b", marginBottom: 2 }}>{title}</div>
-                    <div style={{ fontSize: 12, color: "#475569" }}>{body}</div>
+        {/* OAK SHADOWS — DELINQUENCY */}
+        {prop==="oak" && tab==="delinquency" && <>
+          <Alrt type="red"><strong>Delinquency Report — OneSite, Fiscal Period 01/2026, as of 01/08/2026.</strong> 85 accounts · $99,797.93 net delinquent · Zero prepaid.</Alrt>
+          <KpiGrid items={[
+            {label:"Total Delinquent",     value:fmtD(DEL.total),   color:"#dc2626"},
+            {label:"Current (0–30 days)",  value:fmtD(DEL.current), color:"#d97706", sub:"Collectible now"},
+            {label:"30-Day Bucket",        value:fmtD(DEL.d30),     color:"#d97706"},
+            {label:"60-Day Bucket",        value:fmtD(DEL.d60),     color:"#dc2626"},
+            {label:"90+ Day Bucket",       value:fmtD(DEL.d90),     color:"#991b1b", sub:"Largely uncollectable"},
+            {label:"% of Monthly Billing", value:`${(DEL.total/OAK.totalBillingMonthly*100).toFixed(1)}%`, color:"#dc2626"},
+          ]}/>
+          <div style={{background:"#fff",borderRadius:12,padding:"14px 16px",marginBottom:14,boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
+            <div style={{fontSize:12,fontWeight:700,color:"#1e293b",marginBottom:8}}>Aging Breakdown</div>
+            {[
+              {label:"Current",  val:DEL.current, color:"#f59e0b"},
+              {label:"30-Day",   val:DEL.d30,     color:"#f97316"},
+              {label:"60-Day",   val:DEL.d60,     color:"#ef4444"},
+              {label:"90+ Day",  val:DEL.d90,     color:"#991b1b"},
+            ].map(({label,val,color})=>{
+              const pct=(val/DEL.total*100).toFixed(1);
+              return (
+                <div key={label} style={{marginBottom:7}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+                    <span style={{fontSize:11,color:"#475569",fontWeight:600}}>{label}</span>
+                    <span style={{fontSize:11,fontWeight:800,color}}>{fmtD(val)} <span style={{color:"#94a3b8",fontWeight:400}}>({pct}%)</span></span>
+                  </div>
+                  <div style={{background:"#f1f5f9",borderRadius:6,height:9}}>
+                    <div style={{width:`${pct}%`,background:color,borderRadius:6,height:9}}/>
                   </div>
                 </div>
-              ))}
-            </Section>
-            <Section title="Economic Verdict for Your Underwriting" color="#1e3a5f">
-              <Alert type="green"><strong>Long-term foundation is solid.</strong> Port expansion, Chevron, Pemex, Shell, San Jacinto College anchor durable blue-collar employment — exactly your tenant profile.</Alert>
-              <Alert type="red"><strong>Near-term drag is real.</strong> LyondellBasell explains the vacancy spike. Identify the replacement demand source before underwriting aggressive lease-up assumptions.</Alert>
-              <Alert type="yellow"><strong>Watch the sector.</strong> If a second major Ship Channel employer announces closures during your hold, vacancy could deteriorate further before recovering.</Alert>
-            </Section>
-          </>
-        )}
+              );
+            })}
+            <Alrt type="red">⚠️ <strong>$41,066 (41.1%) is 90+ day</strong> — largely written-off bad debt. Effective collectible delinquency is ~$58,731.</Alrt>
+          </div>
+          <Section title="🚨 Unit 808 — PW Employee (Highest Priority)" color="#dc2626">
+            <Row label="Unit" value="808 — 2x1-1167sf (largest unit on property)"/>
+            <Row label="Resident" value="Mariela, Perla · (832)728-4318" />
+            <Row label="Balance" value="$600.00 current" flag="yellow" sub="Monthly rent — currently 'current' on payments"/>
+            <Row label="Market rent for this unit" value="$1,200/mo" flag="red"/>
+            <Row label="Monthly discount" value="$600/mo — 50% below market" flag="red"/>
+            <Row label="Annual cost of this discount" value="$7,200/yr lost NOI" flag="red"/>
+            <Row label="DEL comment (01/07/2026)" value='"PW EMPLOYEE"' flag="red"/>
+            <Row label="Action required" value="Pull complete lease · Identify employee · Terminate at expiry · Re-lease at $1,200" flag="red"/>
+          </Section>
+          <Section title="PRIORMGMT Inherited Bad Debt" color="#7c3aed">
+            <Alrt type="purple"><strong>Multiple units carry PRIORMGMT charge codes</strong> — unpaid balances from the prior management company. Almost entirely uncollectable. Will need to be written off at or after closing.</Alrt>
+            <Row label="Unit 812 PRIORMGMT" value="$3,990.00" flag="red" sub="Largest — re-filing eviction in progress"/>
+            <Row label="Unit 930 PRIORMGMT" value="$3,785.68" flag="red" sub="Former resident — entirely 90+ day"/>
+            <Row label="Unit 923 PRIORMGMT" value="$765.00" flag="yellow" sub="Former resident"/>
+            <Row label="Unit 724 PRIORMGMT" value="$439.00" flag="yellow"/>
+            <Row label="Unit 965 PRIORMGMT" value="$50.00" flag="yellow"/>
+            <Row label="Est. total PRIORMGMT exposure" value="~$9,030+" flag="red" sub="Confirm full amount in T-12"/>
+          </Section>
+          <Section title="Notable Delinquent Accounts" color="#dc2626">
+            {[
+              {unit:"812",name:"Romero, Monica",      status:"Current", bal:9310.00, note:"Re-filing eviction 01/07. $3,990 PRIORMGMT. NSF on file."},
+              {unit:"930",name:"Gonzalez Salazar, R.",status:"Former",  bal:5186.68, note:"$3,785.68 PRIORMGMT. Former resident — largely uncollectable."},
+              {unit:"709",name:"Rathburn, Wendy",     status:"Current", bal:2180.00, note:"24-hr lockout 01/07 — performed 01/08."},
+              {unit:"732",name:"Calix Galeano, L.",   status:"Former",  bal:2054.00, note:"$1,514 rent + $540 late fee. 90+ days entirely."},
+              {unit:"724",name:"Bustillos Cruz, M.",  status:"Former",  bal:2461.00, note:"$439 PRIORMGMT + $550 late + $1,472 rent."},
+              {unit:"730",name:"Goff, Jason",         status:"Current", bal:1720.00, note:"Long-term (since 04/2020). 24-hr lockout 01/08."},
+              {unit:"945",name:"Reyes, Morena",       status:"Current", bal:1720.00, note:"24-hr lockout 01/08."},
+              {unit:"965",name:"VENTURA ZAMORA, M.",  status:"Former",  bal:1721.00, note:"$1,334 rent + PRIORMGMT + parking. 90+ entirely."},
+            ].map((a,i)=>(
+              <div key={i} style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",padding:"7px 0",borderBottom:"1px solid #f1f5f9",gap:10}}>
+                <span style={{fontWeight:800,color:"#0f172a",minWidth:32}}>#{a.unit}</span>
+                <span style={{flex:1,fontSize:12,fontWeight:600,color:"#1e293b"}}>{a.name}</span>
+                <span style={{fontSize:10,padding:"2px 7px",borderRadius:10,fontWeight:700,background:a.status==="Current"?"#dcfce7":"#fee2e2",color:a.status==="Current"?"#15803d":"#dc2626",whiteSpace:"nowrap"}}>{a.status}</span>
+                <span style={{fontWeight:800,color:"#dc2626",minWidth:70,textAlign:"right"}}>{fmtD(a.bal)}</span>
+                <span style={{fontSize:10,color:"#94a3b8",flex:2,textAlign:"right"}}>{a.note}</span>
+              </div>
+            ))}
+          </Section>
+          <Section title="Underwriting Impact" color="#0f172a">
+            <Alrt type="yellow"><strong>The $106,462/mo billing is GROSS.</strong> Apply a 5–8% collections haircut until T-12 cash receipts are confirmed.</Alrt>
+            <Row label="Stated monthly billing" value={`$${fmt(OAK.totalBillingMonthly)}`}/>
+            <Row label="Collections adjustment (5–8%)" value="-$5,323 to -$8,517/mo" flag="yellow"/>
+            <Row label="Adjusted effective collections" value="~$99,000–$101,000/mo" flag="yellow"/>
+            <Row label="Annual NOI impact" value="~-$35K to -$56K/yr vs stated billing" flag="red"/>
+            <Row label="PRIORMGMT write-off (Year 1)" value="~$9,030 one-time hit" flag="red"/>
+          </Section>
+        </>}
 
-        <div style={{ textAlign: "center", fontSize: 11, color: "#94a3b8", marginTop: 12, paddingBottom: 8 }}>
-          Prepared by Seeds InvestCo Due Diligence Team · March 2026 · Confidential — Internal Use Only
+        {/* OAK SHADOWS — MARKET */}
+        {prop==="oak" && tab==="market" && <>
+          <Alrt type="green"><strong>Oak Shadows at 80.77% is outperforming its submarket.</strong> The 21.6% submarket vacancy is concentrated in distressed assets. Oak Shadows proves local demand exists at this price point.</Alrt>
+          <Section title="Submarket Context" color="#1e3a5f">
+            <Row label="Submarket vacancy" value="21.6%" flag="red" sub="Up from 15.7% — driven by LyondellBasell closure"/>
+            <Row label="Oak Shadows occupancy" value="80.77%" flag="green" sub="Outperforming submarket"/>
+            <Row label="Silver Club (0.15 mi away)" value="Active at $950–$1,050" flag="yellow" sub="Closest direct comp — sets neighborhood floor"/>
+            <Row label="Oak Shadows avg in-place" value="$709.10/unit" flag="yellow" sub="$53.70 below own market rate — upside without reno"/>
+            <Row label="Oak Shadows market rate (system)" value="$762.80/unit" sub="Note: 1x1-520 field is outdated — true potential $670–$720"/>
+          </Section>
+          <Section title="Rent Upside — No Renovation Required" color="#166534">
+            <Alrt type="green">Oak Shadows has meaningful rent upside at lease renewal with zero capital deployed.</Alrt>
+            <Row label="Occupied units × rent gap" value="147 × $53.70 = $7,894/mo" flag="green" sub="$94.7K/yr incremental at lease renewal"/>
+            <Row label="Fill 18 vacant 2x1-750 at market" value="18 × $895 = $16,110/mo" flag="green" sub="$193.3K/yr incremental — no renovation"/>
+            <Row label="Fix Unit 808 (PW Employee)" value="+$600/mo = $7,200/yr" flag="green" sub="Terminate employee lease, re-lease at market"/>
+            <Row label="Total near-term upside" value="~$295K/yr" flag="green" sub="Without any renovation capex"/>
+          </Section>
+          <Section title="Where Oak Shadows Can Go With Renovation" color="#1e3a5f">
+            <Row label="Silver Club benchmark (0.15 mi)" value="$950–$1,050/unit" flag="yellow" sub="Updated but not fully renovated"/>
+            <Row label="Red Pines ceiling (full gut reno)" value="Studio $749 | 1BR $899–$929 | 2BR $1,099–$1,175" flag="green"/>
+            <Row label="Terracita (fully reno, 91.5% occ)" value="~$815–$1,050 ex-utilities" flag="green" sub="All bills paid — normalize for utilities"/>
+            <Row label="Realistic stabilized target" value="$830–$900 blended" flag="yellow" sub="Light targeted improvements · bilingual management"/>
+          </Section>
+        </>}
+
+        {/* OAK SHADOWS — COMPS */}
+        {prop==="oak" && tab==="comps" && <>
+          <Alrt type="yellow">Oak Shadows comps focus on the immediate neighborhood and workforce housing profile. Silver Club is the direct neighbor (0.15 mi). Red Pines is the aspirational ceiling.</Alrt>
+          {oakComps.map((c,i)=><CompCard key={i} c={c}/>)}
+        </>}
+
+        {/* OAK SHADOWS — EXIT MODEL */}
+        {prop==="oak" && tab==="exit" && <>
+          <Alrt type="purple">Exit model for <strong>Oak Shadows — 182 units.</strong> Entry price based on pro-rata share of $23M contract. T-12 required to confirm expense ratio.</Alrt>
+          <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
+            {[
+              {label:`Exit Cap Rate: ${oCapR.toFixed(1)}%`,min:5.5,max:9.0,step:0.1,val:oCapR,set:setOCapR},
+              {label:`Expense Ratio: ${oExpR}%`,           min:40, max:60, step:1,  val:oExpR,set:setOExpR},
+              {label:`Reno: $${oRenoK}K/unit (targeted)`,  min:0,  max:15, step:1,  val:oRenoK,set:setORenoK},
+            ].map(({label,min,max,step,val,set})=>(
+              <div key={label} style={{background:"#fff",borderRadius:10,padding:"11px 13px",boxShadow:"0 1px 4px rgba(0,0,0,0.08)",flex:"1 1 160px"}}>
+                <label style={{fontSize:11,fontWeight:700,color:"#475569",display:"block",marginBottom:5}}>{label}</label>
+                <input type="range" min={min} max={max} step={step} value={val} onChange={e=>set(step<1?parseFloat(e.target.value):parseInt(e.target.value))} style={{width:"100%"}}/>
+              </div>
+            ))}
+          </div>
+          <div style={{background:"#14532d",borderRadius:10,padding:"11px 16px",marginBottom:12,display:"flex",gap:20,flexWrap:"wrap"}}>
+            {[
+              {label:"Entry (pro-rata)",       val:`$${fmt(OAK_PRICE)}`},
+              {label:"Per Door",               val:`$${fmt(PRICE_PER_DOOR)}`},
+              {label:"Targeted Reno",          val:`$${oRenoK}K/unit`},
+              {label:"All-In / Door",          val:`$${Math.round(PRICE_PER_DOOR/1000+oRenoK)}K`, hi:true},
+              {label:"Current Annual Billing", val:`$${fmt(OAK.annualBilling)}`},
+              {label:`NOI @ ${oExpR}% expense`,val:`$${fmt(OAK.annualBilling*(1-oExpR/100))}`},
+            ].map(({label,val,hi})=>(
+              <div key={label} style={{textAlign:"center"}}>
+                <div style={{fontSize:9,color:"#86efac",marginBottom:2}}>{label}</div>
+                <div style={{fontSize:hi?18:13,fontWeight:900,color:hi?"#4ade80":"#fff"}}>{val}</div>
+              </div>
+            ))}
+          </div>
+          <ExitTable rows={oRows} numUnits={OAK_UNITS} entryPrice={PRICE_PER_DOOR} renoK={oRenoK} hold={oHold} color="#166534"/>
+          <div style={{background:"#fff",borderRadius:10,padding:"11px 13px",marginBottom:10}}>
+            <label style={{fontSize:11,fontWeight:700,color:"#475569"}}>Hold Period: {oHold} yr{oHold!==1?"s":""}</label>
+            <input type="range" min={1} max={10} step={1} value={oHold} onChange={e=>setOHold(parseInt(e.target.value))} style={{width:"100%",marginTop:4}}/>
+          </div>
+          <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#166534"}}>
+            💡 <strong>Key Oak Shadows insight:</strong> At current billing ($106,462/mo) and a 7.5% exit cap, Oak Shadows alone at 50% expense ratio generates ~<strong>$8.5M in exit value</strong> — vs the ~$6M pro-rata acquisition cost. That's meaningful Day-1 equity before any improvement.
+          </div>
+        </>}
+
+        {/* OAK SHADOWS — RISKS */}
+        {prop==="oak" && tab==="risks" && <>
+          <Section title="🔴 Critical Risks" color="#dc2626">
+            {[
+              ["🚨 Parawest Employee in Unit 808","DEL report confirms 'PW EMPLOYEE' in 2x1-1167sf at $600 vs $1,200 market. Pull lease, identify employee, assess disclosure. Day-1 management transition required."],
+              ["HOPA/55+ Compliance","Rent roll shows general-occupancy workforce profile. No age data in OneSite export. If designation is active and unenforced, FHA liability transfers to buyer at closing."],
+              ["$99.8K Delinquency","93.7% of monthly billing outstanding. $41K in 90+ day bucket — largely uncollectable PRIORMGMT carryover. Apply 5–8% collections haircut to NOI."],
+              ["2x1-750 Vacancy (18 of 50 units)","64% occupancy on largest unit type. Near-market rents confirm this is NOT a pricing problem. Inspect all 18 before closing."],
+              ["T-12 Financials","No verified trailing 12-month cash receipts. Actual collections rate unknown."],
+            ].map(([t,b],i)=><Alrt key={i} type="red"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+          <Section title="🟡 Significant Risks" color="#b45309">
+            {[
+              ["$9K+ PRIORMGMT Write-offs","Inherited bad debt from prior management. Will hit NOI in Year 1."],
+              ["Bulk Lockout Pipeline","16 units locked out 01/07–01/08. Some will vacate rather than pay — watch near-term vacancy pipeline."],
+              ["2x1-850 Vacancy (6 of 13 units)","53.85% occupancy. Inspect all 6 before closing."],
+              ["1x1-520 Market Rate Outdated","System shows $595 market; tenants paying $625–$890. True market ~$670–$720. Underwriting must use realistic rates."],
+            ].map(([t,b],i)=><Alrt key={i} type="yellow"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+          <Section title="🟢 Upside Factors" color="#166634">
+            {[
+              ["Cash-Flowing from Day 1","$106,462/mo confirmed billing. ~$638K–$702K NOI/yr at 45–50% expense ratio."],
+              ["Fill 18 Vacants = $193K/yr","No renovation required — pure management/leasing execution."],
+              ["Rent-to-Market Upside = $94.7K/yr","147 occupied units × $53.70 gap — achievable at lease renewal without capex."],
+              ["Unit 808 Fix = $7,200/yr Instant","Terminate PW employee lease, re-lease at $1,200 market."],
+              ["Entry Creates Day-1 Equity","~$6M acquisition cost vs ~$8.5M implied value at current billing and 7.5% cap."],
+            ].map(([t,b],i)=><Alrt key={i} type="green"><strong>{t}:</strong> {b}</Alrt>)}
+          </Section>
+        </>}
+
+        {/* OAK SHADOWS — NEXT STEPS */}
+        {prop==="oak" && tab==="nextsteps" && <>
+          <Section title="Immediate" color="#dc2626">
+            {[
+              ["Pull Unit 808 Complete Lease","PW EMPLOYEE confirmed. Get full lease, term, employee identity, determine disclosure status. This is both a legal and management-conduct issue."],
+              ["HOPA Age Verification Survey","Request full tenant DOB records from Parawest. If records don't exist, that itself is an active violation. #1 legal priority."],
+              ["Inspect 18 Vacant 2x1-750 Units","Walk every vacant 2BR/750. Determine condition vs. management/marketing problem. Condition issue = capex. Marketing = Day-1 management change."],
+              ["Day-1 Greenline Management Proposal","Unit 808 disclosure makes this non-negotiable. Get a transition proposal with Day-1 leasing plan for the 18 vacant 2BRs."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fee2e2",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#dc2626",minWidth:20}}>!</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+          <Section title="Due Diligence — Within 2 Weeks" color="#b45309">
+            {[
+              ["T-12 Financials","Actual cash receipts, write-off history, eviction costs, PRIORMGMT balance detail. Cross-ref $99.8K delinquency against cash collected."],
+              ["Inspect 6 Vacant 2x1-850 Units","Condition survey on all 6 vacant 850sf units."],
+              ["Update Market Rents in OneSite","1x1-520 market rate ($595) is materially outdated — tenants paying $625–$890. Request Parawest run a market survey."],
+              ["Parawest Background Check","Research other Parawest-managed properties. Understand systemic management issues."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fed7aa",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#d97706",minWidth:20}}>{i+1}</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+          <Section title="Pre-Close" color="#1e3a5f">
+            {[
+              ["Oak Shadows Final Proforma","T-12 + collections-adjusted effective revenue + 2BR vacancy absorption + PRIORMGMT write-off budget."],
+              ["Capital Stack — Oak Shadows Only","Targeted capex on vacant 2BR units + deferred maintenance. No full renovation required for near-term upside."],
+            ].map(([t,b],i)=>(
+              <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #dbeafe",alignItems:"flex-start"}}>
+                <span style={{fontWeight:900,color:"#2563eb",minWidth:20}}>→</span>
+                <div><div style={{fontSize:13,fontWeight:700,color:"#1e293b",marginBottom:2}}>{t}</div><div style={{fontSize:12,color:"#475569"}}>{b}</div></div>
+              </div>
+            ))}
+          </Section>
+        </>}
+
+        {/* OAK SHADOWS — ECONOMIC INTEL */}
+        {prop==="oak" && tab==="econ" && <EconContent/>}
+
+        <div style={{textAlign:"center",fontSize:10,color:"#94a3b8",marginTop:12,paddingBottom:8}}>
+          Seeds InvestCo Due Diligence · March 2026 · Confidential — Internal Use Only<br/>
+          $23M Contract · 700 Doors · $32,857/door · Oak Shadows OneSite confirmed 01/08/2026
         </div>
       </div>
     </div>
