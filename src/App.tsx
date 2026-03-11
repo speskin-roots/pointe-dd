@@ -464,7 +464,7 @@ export default function App() {
               </div>
               <input type="range" min={30} max={85} step={0.5} value={pointeAllocPct}
                 onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
-                style={{width:"100%",accentColor:"#1e3a5f",marginTop:10}}/>
+                style={{width:"100%",accentColor:"#1e3a5f",marginTop:18}}/>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginTop:2}}>
                 <span>30% Pointe / 70% Oak</span>
                 <span style={{color:"#64748b",fontWeight:700}}>◆ {pointeAllocPct.toFixed(0)}% / {oakAllocPct.toFixed(0)}%</span>
