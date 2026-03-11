@@ -454,7 +454,7 @@ export default function App() {
                 <span style={{fontSize:11,fontWeight:700,color:"#14532d"}}>More to Oak Shadows →</span>
               </div>
               {/* Visual bar */}
-              <div style={{position:"relative",height:28,borderRadius:14,overflow:"hidden",background:"#e2e8f0",marginBottom:8}}>
+              <div style={{position:"relative",height:28,borderRadius:14,overflow:"hidden",background:"#e2e8f0"}}>
                 <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pointeAllocPct}%`,background:"linear-gradient(90deg,#1e3a5f,#3b82f6)",transition:"width 0.1s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:8}}>
                   {pointeAllocPct>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{pointeAllocPct.toFixed(0)}%</span>}
                 </div>
@@ -464,7 +464,7 @@ export default function App() {
               </div>
               <input type="range" min={30} max={85} step={0.5} value={pointeAllocPct}
                 onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
-                style={{width:"100%",accentColor:"#1e3a5f"}}/>
+                style={{width:"100%",accentColor:"#1e3a5f",marginTop:10}}/>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginTop:2}}>
                 <span>30% Pointe / 70% Oak</span>
                 <span style={{color:"#64748b",fontWeight:700}}>◆ {pointeAllocPct.toFixed(0)}% / {oakAllocPct.toFixed(0)}%</span>
