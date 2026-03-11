@@ -453,18 +453,28 @@ export default function App() {
                 <span style={{fontSize:11,fontWeight:700,color:"#1e3a5f"}}>← More to The Pointe</span>
                 <span style={{fontSize:11,fontWeight:700,color:"#14532d"}}>More to Oak Shadows →</span>
               </div>
-              {/* Visual bar */}
-              <div style={{position:"relative",height:28,borderRadius:14,overflow:"hidden",background:"#e2e8f0"}}>
-                <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pointeAllocPct}%`,background:"linear-gradient(90deg,#1e3a5f,#3b82f6)",transition:"width 0.1s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:8}}>
-                  {pointeAllocPct>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{pointeAllocPct.toFixed(0)}%</span>}
+              {/* Combined bar + slider */}
+              <style>{`
+                .alloc-slider { -webkit-appearance:none; appearance:none; width:100%; height:28px; border-radius:14px; outline:none; cursor:pointer; }
+                .alloc-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:4px; height:34px; border-radius:2px; background:#fff; box-shadow:0 0 4px rgba(0,0,0,0.4); cursor:grab; border:none; }
+                .alloc-slider::-moz-range-thumb { width:4px; height:34px; border-radius:2px; background:#fff; box-shadow:0 0 4px rgba(0,0,0,0.4); cursor:grab; border:none; }
+                .alloc-slider::-webkit-slider-runnable-track { height:28px; border-radius:14px; }
+                .alloc-slider::-moz-range-track { height:28px; border-radius:14px; }
+              `}</style>
+              {(() => {
+                const thumbPct = ((pointeAllocPct - 30) / (85 - 30)) * 100;
+                return (
+                <div style={{position:"relative"}}>
+                  <input type="range" className="alloc-slider" min={30} max={85} step={0.5} value={pointeAllocPct}
+                    onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
+                    style={{background:`linear-gradient(to right, #1e3a5f 0%, #3b82f6 ${thumbPct}%, #4ade80 ${thumbPct}%, #16a34a 100%)`}}/>
+                  <div style={{position:"absolute",top:0,left:0,right:0,height:28,pointerEvents:"none"}}>
+                    {pointeAllocPct>35&&<span style={{position:"absolute",left:`${thumbPct/2}%`,top:"50%",transform:"translate(-50%,-50%)",fontSize:10,fontWeight:800,color:"#fff"}}>{pointeAllocPct.toFixed(0)}%</span>}
+                    {oakAllocPct>20&&<span style={{position:"absolute",left:`${thumbPct + (100-thumbPct)/2}%`,top:"50%",transform:"translate(-50%,-50%)",fontSize:10,fontWeight:800,color:"#fff"}}>{oakAllocPct.toFixed(0)}%</span>}
+                  </div>
                 </div>
-                <div style={{position:"absolute",right:0,top:0,height:"100%",width:`${oakAllocPct}%`,background:"linear-gradient(90deg,#16a34a,#4ade80)",transition:"width 0.1s",display:"flex",alignItems:"center",paddingLeft:8}}>
-                  {oakAllocPct>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{oakAllocPct.toFixed(0)}%</span>}
-                </div>
-              </div>
-              <input type="range" min={30} max={85} step={0.5} value={pointeAllocPct}
-                onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
-                style={{width:"100%",accentColor:"#1e3a5f",marginTop:18}}/>
+                );
+              })()}
               <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginTop:2}}>
                 <span>30% Pointe / 70% Oak</span>
                 <span style={{color:"#64748b",fontWeight:700}}>◆ {pointeAllocPct.toFixed(0)}% / {oakAllocPct.toFixed(0)}%</span>
