@@ -1,13 +1,11 @@
 import { useState } from "react";
 
-// ── SHARED CONSTANTS ────────────────────────────────────────────────────────
-const CONTRACT_TOTAL = 23000000;
+const CONTRACT_TOTAL = 20000000;
 const POINTE_UNITS = 518;
 const OAK_UNITS = 182;
 const TOTAL_DOORS = 700;
-const PRICE_PER_DOOR = CONTRACT_TOTAL / TOTAL_DOORS; // ~32,857
+const PRICE_PER_DOOR = CONTRACT_TOTAL / TOTAL_DOORS;
 
-// Blended price split pro-rata by doors
 const POINTE_PRICE = Math.round((POINTE_UNITS / TOTAL_DOORS) * CONTRACT_TOTAL);
 const OAK_PRICE    = Math.round((OAK_UNITS   / TOTAL_DOORS) * CONTRACT_TOTAL);
 
@@ -22,7 +20,6 @@ const DEL = {
   total:99797.93, current:35198.67, d30:14845.33, d60:8687.50, d90:41066.43,
 };
 
-// ── HELPERS ─────────────────────────────────────────────────────────────────
 const fmt  = n => n.toLocaleString("en-US",{maximumFractionDigits:0});
 const fmtD = n => "$"+n.toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtM = n => "$"+(n/1e6).toFixed(2)+"M";
@@ -67,7 +64,6 @@ const KpiGrid = ({items}) => (
   </div>
 );
 
-// ── EXIT MODEL CALC ─────────────────────────────────────────────────────────
 function calcRows(scenarios, numUnits, expR, capR) {
   return scenarios.map(s => {
     const egi  = numUnits * s.rent * s.occ * 12;
@@ -77,7 +73,6 @@ function calcRows(scenarios, numUnits, expR, capR) {
   });
 }
 
-// ── COMP DATA ────────────────────────────────────────────────────────────────
 const pointeComps = [
   {name:"Las Plazas ⭐ PRIMARY COMP",addr:"3940 S Shaver St — DIRECTLY ACROSS THE STREET",dist:"0 mi",built:"1964",units:"80",occ:"90%+ occupied · <5% delinquency",occF:"green",rents:"Magnolia 1BR/580sf $809 · Willow 1BR/620sf $829 · Palm 2BR/750sf $949 · Cypress 2BR/925sf $999 · Oak 3BR/1200sf $1,299",eff:"$809–$1,299 confirmed asking",note:"🏆 BEST DIRECT COMP — across the street, same vintage, $13K/door renovation, 90%+ occ, <5% delinquency, waiting list on all 2BR+. ⚠️ 1BRs are the ONLY struggle — direct signal for Pointe's 1BR lease-up strategy.",noteF:"green",ph:"(346) 980-7106",primary:true,
     floorplans:[
@@ -117,22 +112,29 @@ const oakMix = [
   {type:"STU-340",sqft:340,mkt:590, total:6, occ:4, occPct:66.67,avgLeased:580,avail:2,rentGap:-10, note:"2 studios vacant. Near market on occupied."},
 ];
 
-// ── MAIN APP ─────────────────────────────────────────────────────────────────
 export default function App() {
-  const [prop, setProp] = useState("combined"); // "combined" | "pointe" | "oak"
+  const [prop, setProp] = useState("combined");
   const [tab,  setTab]  = useState("summary");
-  const [pointeAllocPct, setPointeAllocPct] = useState(Math.round(POINTE_UNITS/TOTAL_DOORS*100)); // default ~74%
+  const [pointeAllocPct, setPointeAllocPct] = useState(Math.round(POINTE_UNITS/TOTAL_DOORS*100));
+  const [contractPrice, setContractPrice] = useState(CONTRACT_TOTAL);
 
-  // Exit model state — Pointe
   const [pCapR, setPCapR] = useState(7.5);
   const [pExpR, setPExpR] = useState(58);
   const [pRenoK,setPRenoK]= useState(13);
   const [pHold, setPHold] = useState(3);
-  // Exit model state — Oak
   const [oCapR, setOCapR] = useState(7.5);
   const [oExpR, setOExpR] = useState(50);
   const [oRenoK,setORenoK]= useState(5);
   const [oHold, setOHold] = useState(3);
+
+  const oakAllocPct   = 100 - pointeAllocPct;
+  const pointeAlloc   = contractPrice * pointeAllocPct / 100;
+  const oakAlloc      = contractPrice * oakAllocPct   / 100;
+  const pointePPD     = pointeAlloc / POINTE_UNITS;
+  const oakPPD        = oakAlloc    / OAK_UNITS;
+  const blendedPPD    = contractPrice / TOTAL_DOORS;
+  const priceDelta    = contractPrice - CONTRACT_TOTAL;
+  const priceDeltaPPD = blendedPPD - (CONTRACT_TOTAL / TOTAL_DOORS);
 
   const PROPS = [
     {id:"combined", label:"📋 Combined Portfolio", color:"#0f172a", accent:"#3b82f6"},
@@ -188,9 +190,7 @@ export default function App() {
     {label:"95% / $895 (bull — 2BR at mkt)",occ:0.95,  rent:895},
   ], OAK_UNITS, oExpR, oCapR);
 
-  const oakNOI = OAK.annualBilling * (1 - oExpR/100);
-
-  const ExitTable = ({rows, numUnits, entryPrice, renoK, hold, color}) => {
+  const ExitTable = ({rows, numUnits, entryPrice, renoK, hold}) => {
     const allIn = entryPrice + renoK*1000;
     return (
       <div style={{overflowX:"auto",borderRadius:10,overflow:"hidden",boxShadow:"0 1px 6px rgba(0,0,0,0.08)",marginBottom:14}}>
@@ -347,7 +347,9 @@ export default function App() {
               ))}
             </div>
           </div>
-          <div style={{marginTop:10,display:"flex",gap:5,flexWrap:"wrap"}}>
+          <div style={{marginTop:8}}>
+            <Badge text="✅ Renegotiated — $20M (-13% vs $23M)" color="green"/>
+            <Badge text={`$${fmt(PRICE_PER_DOOR)}/door blended`} color="green"/>
             <Badge text="Direct Contract — Seeds InvestCo" color="green"/>
             <Badge text="Active Federal Litigation on Title" color="red"/>
             <Badge text="HOPA — Age Data Required" color="red"/>
@@ -366,8 +368,8 @@ export default function App() {
                 transition:"all 0.15s"}}>
               {p.label}
               {p.id==="combined" && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#94a3b8":"#94a3b8"}}>Summary · Risks · Next Steps</div>}
-              {p.id==="pointe"   && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#93c5fd":"#94a3b8"}}>518 units · Est. $17M · ~65% occ</div>}
-              {p.id==="oak"      && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#86efac":"#94a3b8"}}>182 units · Est. $6M · 80.77% occ</div>}
+              {p.id==="pointe"   && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#93c5fd":"#94a3b8"}}>518 units · ~${fmt(POINTE_PRICE/1e6*100/100)}M · ~65% occ</div>}
+              {p.id==="oak"      && <div style={{fontSize:10,fontWeight:400,marginTop:2,color:prop===p.id?"#86efac":"#94a3b8"}}>182 units · ~${fmt(OAK_PRICE/1e6*100/100)}M · 80.77% occ</div>}
             </button>
           ))}
         </div>
@@ -385,29 +387,98 @@ export default function App() {
           ))}
         </div>
 
-        {/* ════════════════════════════════════════
-            COMBINED — SUMMARY
-        ════════════════════════════════════════ */}
+        {/* ════ COMBINED — SUMMARY ════ */}
         {prop==="combined" && tab==="summary" && (()=>{
-          const oakAllocPct   = 100 - pointeAllocPct;
-          const pointeAlloc   = CONTRACT_TOTAL * pointeAllocPct / 100;
-          const oakAlloc      = CONTRACT_TOTAL * oakAllocPct   / 100;
-          const pointePPD     = pointeAlloc / POINTE_UNITS;
-          const oakPPD        = oakAlloc    / OAK_UNITS;
-          const blendedPPD    = CONTRACT_TOTAL / TOTAL_DOORS;
-          const pointePremium = ((pointePPD / blendedPPD) - 1) * 100;
-          const oakPremium    = ((oakPPD    / blendedPPD) - 1) * 100;
+          const oAP = 100 - pointeAllocPct;
+          const pA  = contractPrice * pointeAllocPct / 100;
+          const oA  = contractPrice * oAP / 100;
+          const pPPD = pA / POINTE_UNITS;
+          const oPPD = oA / OAK_UNITS;
+          const bPPD = contractPrice / TOTAL_DOORS;
+          const pPrem = ((pPPD/bPPD)-1)*100;
+          const oPrem = ((oPPD/bPPD)-1)*100;
+          const cd = contractPrice - CONTRACT_TOTAL;
+          const cdPPD = bPPD - (CONTRACT_TOTAL/TOTAL_DOORS);
           return <>
+          <Alrt type="green">
+            <strong>🎉 Purchase price renegotiated to $20M — down $3M (-13%) from the signed $23M contract.</strong> Blended entry drops from $32,857/door to <strong>${fmt(CONTRACT_TOTAL/TOTAL_DOORS)}/door</strong>, widening the margin to stabilized comps (~$90K/door) by an additional <strong>$4,286/door</strong> across 700 doors.
+          </Alrt>
           <KpiGrid items={[
             {label:"Contract Price",     value:`${(CONTRACT_TOTAL/1e6).toFixed(1)}M`,    color:"#16a34a"},
-            {label:"Blended Price/Door", value:`${fmt(blendedPPD)}`,                     color:"#16a34a"},
-            {label:"Total Doors",        value:`${TOTAL_DOORS}`,                          color:"#0f172a"},
+            {label:"Blended Price/Door", value:`$${fmt(CONTRACT_TOTAL/TOTAL_DOORS)}`,    color:"#16a34a"},
+            {label:"Savings vs $23M",    value:`-$3M / -$4,286/door`,                    color:"#16a34a"},
             {label:"The Pointe Occ.",    value:"~65%",                                    color:"#dc2626"},
             {label:"Oak Shadows Occ.",   value:"80.77%",                                  color:"#166534"},
-            {label:"Oak Monthly Billing",value:`${fmt(OAK.totalBillingMonthly)}`,        color:"#b45309"},
-            {label:"Oak Delinquency",    value:`${fmt(DEL.total)}`,                      color:"#dc2626"},
-            {label:"Oak Rev. Gap/Yr",    value:`${fmt((OAK.totalMarketMonthly-OAK.totalBillingMonthly)*12)}`, color:"#d97706"},
+            {label:"Oak Monthly Billing",value:`$${fmt(OAK.totalBillingMonthly)}`,        color:"#b45309"},
+            {label:"Oak Delinquency",    value:`$${fmt(DEL.total)}`,                      color:"#dc2626"},
+            {label:"Margin to $90K Comp",value:`+$${fmt(90000-CONTRACT_TOTAL/TOTAL_DOORS)}/door`, color:"#16a34a"},
           ]}/>
+
+          {/* ── PRICE SLIDER ── */}
+          <div style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:14,boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:4}}>
+              <span style={{fontSize:13,fontWeight:800,color:"#0f172a"}}>💲 Purchase Price Scenario</span>
+              <button onClick={()=>setContractPrice(CONTRACT_TOTAL)}
+                style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:8,border:"1px solid #e2e8f0",background:contractPrice===CONTRACT_TOTAL?"#0f172a":"#f8fafc",color:contractPrice===CONTRACT_TOTAL?"#fff":"#475569",cursor:"pointer"}}>
+                Reset to $20M
+              </button>
+            </div>
+            <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>Adjust to model further negotiation scenarios. Baseline is the newly renegotiated $20M.</div>
+            <div style={{display:"flex",alignItems:"flex-end",gap:16,marginBottom:14,flexWrap:"wrap"}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,textTransform:"uppercase",marginBottom:2}}>Contract Price</div>
+                <div style={{fontSize:36,fontWeight:900,color:contractPrice<CONTRACT_TOTAL?"#16a34a":contractPrice>CONTRACT_TOTAL?"#dc2626":"#1e293b",lineHeight:1}}>
+                  ${(contractPrice/1e6).toFixed(2)}M
+                </div>
+              </div>
+              <div style={{display:"flex",gap:10,flexWrap:"wrap",paddingBottom:4}}>
+                {[
+                  {label:"Blended $/Door",      val:`$${fmt(bPPD)}`,                                              color:"#1e293b"},
+                  {label:"vs $20M Baseline",    val:`${cd>=0?"+":""}${fmt(Math.abs(cd))}`,                        color:cd<=0?"#16a34a":"#dc2626"},
+                  {label:"$/Door Δ",            val:`${cdPPD>=0?"+":""}${fmt(Math.abs(cdPPD))}`,                  color:cdPPD<=0?"#16a34a":"#dc2626"},
+                  {label:"Margin to $90K Comp", val:`+${fmt(90000-bPPD)}/door`,                                   color:"#16a34a"},
+                ].map(({label,val,color})=>(
+                  <div key={label} style={{background:"#f8fafc",borderRadius:8,padding:"7px 12px",textAlign:"center",minWidth:100}}>
+                    <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,textTransform:"uppercase",marginBottom:2}}>{label}</div>
+                    <div style={{fontSize:14,fontWeight:900,color}}>{val}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <input type="range" min={13000000} max={23000000} step={100000}
+              value={contractPrice} onChange={e=>setContractPrice(parseInt(e.target.value))}
+              style={{width:"100%",accentColor:"#0f172a",marginBottom:4}}/>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginBottom:12}}>
+              <span>$13M <span style={{color:"#16a34a"}}>({fmt(13000000/TOTAL_DOORS)}/door)</span></span>
+              <span style={{color:"#475569",fontWeight:700}}>◆ ${(contractPrice/1e6).toFixed(2)}M</span>
+              <span>$23M <span style={{color:"#dc2626"}}>({fmt(23000000/TOTAL_DOORS)}/door)</span></span>
+            </div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              <div style={{fontSize:10,fontWeight:700,color:"#94a3b8",alignSelf:"center",marginRight:4}}>Quick scenarios:</div>
+              {[
+                {label:"$16M (-20%)", val:16000000, color:"#15803d"},
+                {label:"$18M (-10%)", val:18000000, color:"#16a34a"},
+                {label:"$20M (current)",val:20000000, color:"#0f172a"},
+                {label:"$21M (+5%)",  val:21000000, color:"#d97706"},
+                {label:"$23M (orig)", val:23000000, color:"#dc2626"},
+              ].map(({label,val,color})=>(
+                <button key={val} onClick={()=>setContractPrice(val)}
+                  style={{fontSize:10,fontWeight:700,padding:"4px 10px",borderRadius:8,border:`1px solid ${color}44`,
+                    background:contractPrice===val?color:"#fff",
+                    color:contractPrice===val?"#fff":color,cursor:"pointer"}}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            <div style={{marginTop:12,display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+              <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#14532d",borderLeft:"3px solid #16a34a"}}>
+                <strong>Oak Shadows yield on cost:</strong> At $20M total, Oak's ~$638K–$702K NOI represents a <strong>{((OAK.annualBilling*0.55/contractPrice)*100).toFixed(1)}%–{((OAK.annualBilling*0.50/contractPrice)*100).toFixed(1)}% yield on the entire purchase price</strong> — before The Pointe generates a dollar.
+              </div>
+              <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#1e3a5f",borderLeft:"3px solid #3b82f6"}}>
+                <strong>Stabilized upside:</strong> At ~$90K/door across {TOTAL_DOORS} doors, exit value ≈ <strong>~${fmt(TOTAL_DOORS*90000)}</strong> — a <strong>${fmt(TOTAL_DOORS*90000-contractPrice)} gain</strong> vs. this price.
+              </div>
+            </div>
+          </div>
 
           {/* ── ALLOCATION SLIDER ── */}
           <div style={{background:"#fff",borderRadius:12,padding:"18px 20px",marginBottom:18,boxShadow:"0 1px 6px rgba(0,0,0,0.08)"}}>
@@ -416,23 +487,21 @@ export default function App() {
               <span style={{fontSize:11,color:"#94a3b8"}}>Drag to model independent sale scenarios</span>
             </div>
             <div style={{fontSize:11,color:"#64748b",marginBottom:14}}>
-              The $23M contract is a single transaction. Adjust the allocation below to model how price is attributed to each property — relevant for separate financing, future individual sales, or tax basis allocation.
+              The $20M contract is a single transaction. Adjust the allocation below to model how price is attributed to each property — relevant for separate financing, future individual sales, or tax basis allocation.
             </div>
-
-            {/* Property cards */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
               {[
-                {label:"🏢 The Pointe",  units:POINTE_UNITS, alloc:pointeAlloc, ppd:pointePPD, pct:pointeAllocPct,  premium:pointePremium, color:"#1e3a5f", bg:"#eff6ff"},
-                {label:"🏠 Oak Shadows", units:OAK_UNITS,    alloc:oakAlloc,    ppd:oakPPD,    pct:oakAllocPct,    premium:oakPremium,    color:"#14532d", bg:"#f0fdf4"},
+                {label:"🏢 The Pointe",  units:POINTE_UNITS, alloc:pA, ppd:pPPD, pct:pointeAllocPct, premium:pPrem, color:"#1e3a5f", bg:"#eff6ff"},
+                {label:"🏠 Oak Shadows", units:OAK_UNITS,    alloc:oA, ppd:oPPD, pct:oAP,            premium:oPrem, color:"#14532d", bg:"#f0fdf4"},
               ].map(({label,units,alloc,ppd,pct,premium,color,bg})=>(
                 <div key={label} style={{background:bg,borderRadius:10,padding:"14px 16px",border:`2px solid ${color}22`}}>
                   <div style={{fontSize:13,fontWeight:800,color,marginBottom:8}}>{label}</div>
                   <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
                     {[
-                      {k:"Allocation %",  v:`${pct.toFixed(1)}%`},
-                      {k:"Total $",       v:`${(alloc/1e6).toFixed(2)}M`},
-                      {k:"Price / Door",  v:`${fmt(ppd)}`},
-                      {k:"vs Blended",    v:`${premium>=0?"+":""}${premium.toFixed(1)}%`},
+                      {k:"Allocation %", v:`${pct.toFixed(1)}%`},
+                      {k:"Total $",      v:`${(alloc/1e6).toFixed(2)}M`},
+                      {k:"Price / Door", v:`$${fmt(ppd)}`},
+                      {k:"vs Blended",   v:`${premium>=0?"+":""}${premium.toFixed(1)}%`},
                     ].map(({k,v})=>(
                       <div key={k} style={{background:"#fff",borderRadius:7,padding:"7px 10px"}}>
                         <div style={{fontSize:9,color:"#94a3b8",fontWeight:600,textTransform:"uppercase"}}>{k}</div>
@@ -440,55 +509,38 @@ export default function App() {
                       </div>
                     ))}
                   </div>
-                  <div style={{marginTop:8,fontSize:10,color:"#64748b"}}>
-                    {units} doors · ${fmt(ppd)}/door · {pct.toFixed(1)}% of contract
-                  </div>
+                  <div style={{marginTop:8,fontSize:10,color:"#64748b"}}>{units} doors · ${fmt(ppd)}/door · {pct.toFixed(1)}% of contract</div>
                 </div>
               ))}
             </div>
-
-            {/* Slider */}
             <div style={{position:"relative",padding:"0 0 6px"}}>
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                 <span style={{fontSize:11,fontWeight:700,color:"#1e3a5f"}}>← More to The Pointe</span>
                 <span style={{fontSize:11,fontWeight:700,color:"#14532d"}}>More to Oak Shadows →</span>
               </div>
-              {/* Combined bar + slider */}
-              <style>{`
-                .alloc-slider { -webkit-appearance:none; appearance:none; width:100%; height:28px; border-radius:14px; outline:none; cursor:pointer; }
-                .alloc-slider::-webkit-slider-thumb { -webkit-appearance:none; appearance:none; width:4px; height:34px; border-radius:2px; background:#fff; box-shadow:0 0 4px rgba(0,0,0,0.4); cursor:grab; border:none; }
-                .alloc-slider::-moz-range-thumb { width:4px; height:34px; border-radius:2px; background:#fff; box-shadow:0 0 4px rgba(0,0,0,0.4); cursor:grab; border:none; }
-                .alloc-slider::-webkit-slider-runnable-track { height:28px; border-radius:14px; }
-                .alloc-slider::-moz-range-track { height:28px; border-radius:14px; }
-              `}</style>
-              {(() => {
-                const thumbPct = ((pointeAllocPct - 30) / (85 - 30)) * 100;
-                return (
-                <div style={{position:"relative"}}>
-                  <input type="range" className="alloc-slider" min={30} max={85} step={0.5} value={pointeAllocPct}
-                    onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
-                    style={{background:`linear-gradient(to right, #1e3a5f 0%, #3b82f6 ${thumbPct}%, #4ade80 ${thumbPct}%, #16a34a 100%)`}}/>
-                  <div style={{position:"absolute",top:0,left:0,right:0,height:28,pointerEvents:"none"}}>
-                    {pointeAllocPct>35&&<span style={{position:"absolute",left:`${thumbPct/2}%`,top:"50%",transform:"translate(-50%,-50%)",fontSize:10,fontWeight:800,color:"#fff"}}>{pointeAllocPct.toFixed(0)}%</span>}
-                    {oakAllocPct>20&&<span style={{position:"absolute",left:`${thumbPct + (100-thumbPct)/2}%`,top:"50%",transform:"translate(-50%,-50%)",fontSize:10,fontWeight:800,color:"#fff"}}>{oakAllocPct.toFixed(0)}%</span>}
-                  </div>
+              <div style={{position:"relative",height:28,borderRadius:14,overflow:"hidden",background:"#e2e8f0",marginBottom:8}}>
+                <div style={{position:"absolute",left:0,top:0,height:"100%",width:`${pointeAllocPct}%`,background:"linear-gradient(90deg,#1e3a5f,#3b82f6)",transition:"width 0.1s",display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:8}}>
+                  {pointeAllocPct>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{pointeAllocPct.toFixed(0)}%</span>}
                 </div>
-                );
-              })()}
+                <div style={{position:"absolute",right:0,top:0,height:"100%",width:`${oAP}%`,background:"linear-gradient(90deg,#16a34a,#4ade80)",transition:"width 0.1s",display:"flex",alignItems:"center",paddingLeft:8}}>
+                  {oAP>15&&<span style={{fontSize:10,fontWeight:800,color:"#fff"}}>{oAP.toFixed(0)}%</span>}
+                </div>
+              </div>
+              <input type="range" min={30} max={85} step={0.5} value={pointeAllocPct}
+                onChange={e=>setPointeAllocPct(parseFloat(e.target.value))}
+                style={{width:"100%",accentColor:"#1e3a5f"}}/>
               <div style={{display:"flex",justifyContent:"space-between",fontSize:10,color:"#94a3b8",marginTop:2}}>
                 <span>30% Pointe / 70% Oak</span>
-                <span style={{color:"#64748b",fontWeight:700}}>◆ {pointeAllocPct.toFixed(0)}% / {oakAllocPct.toFixed(0)}%</span>
+                <span style={{color:"#64748b",fontWeight:700}}>◆ {pointeAllocPct.toFixed(0)}% / {oAP.toFixed(0)}%</span>
                 <span>85% Pointe / 15% Oak</span>
               </div>
             </div>
-
-            {/* Insight callouts */}
             <div style={{marginTop:14,display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div style={{background:"#eff6ff",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#1e3a5f",borderLeft:"3px solid #3b82f6"}}>
-                <strong>The Pointe breakeven:</strong> At ${fmt(pointePPD)}/door, you need to exit at {((pointePPD/1000)*1.0).toFixed(0)}K+ per door to recover basis. Stabilized comps at ~$90K/door give {((90000-pointePPD)/1000).toFixed(0)}K/door of margin.
+                <strong>The Pointe breakeven:</strong> At ${fmt(pPPD)}/door, you need to exit at {fmt(Math.round(pPPD/1000))}K+ per door to recover basis. Stabilized comps at ~$90K/door give <strong>${fmt(Math.round(90000-pPPD))}/door of margin</strong>.
               </div>
               <div style={{background:"#f0fdf4",borderRadius:8,padding:"10px 12px",fontSize:11,color:"#14532d",borderLeft:"3px solid #16a34a"}}>
-                <strong>Oak Shadows implied equity:</strong> At ${fmt(oakPPD)}/door entry, current billing at a 7.5% cap and 50% expense ratio implies ~${fmt(Math.round(OAK.annualBilling*0.5/0.075/OAK_UNITS))}K/door in value — <strong>${fmt(Math.round(OAK.annualBilling*0.5/0.075/OAK_UNITS - oakPPD))} of Day-1 equity per door.</strong>
+                <strong>Oak Shadows implied equity:</strong> At ${fmt(Math.round(oPPD))}/door entry, current billing at 7.5% cap / 50% expense implies ~${fmt(Math.round(OAK.annualBilling*0.5/0.075/OAK_UNITS))}K/door in value — <strong>${fmt(Math.round(OAK.annualBilling*0.5/0.075/OAK_UNITS-oPPD))} of Day-1 equity per door.</strong>
               </div>
             </div>
           </div>
@@ -496,11 +548,11 @@ export default function App() {
           <Section title="Transaction Summary" color="#0f172a">
             <Row label="Seller" value="VRK 38 Apartments LLC / Thistle Creek"/>
             <Row label="Buyer" value="Seeds InvestCo (Direct Contract)" flag="green"/>
-            <Row label="Contract Price" value="$23,000,000" flag="green" sub="Renegotiated post-walkthrough — down from $44K/door"/>
-            <Row label="Blended Price Per Door" value={`${fmt(blendedPPD)}/door`} flag="green"/>
-            <Row label="The Pointe — allocated" value={`${(pointeAlloc/1e6).toFixed(2)}M · ${fmt(pointePPD)}/door`} sub={`${pointeAllocPct.toFixed(1)}% of contract`} flag={pointePPD<35000?"green":"yellow"}/>
-            <Row label="Oak Shadows — allocated" value={`${(oakAlloc/1e6).toFixed(2)}M · ${fmt(oakPPD)}/door`} sub={`${oakAllocPct.toFixed(1)}% of contract`} flag={oakPPD<35000?"green":"yellow"}/>
-            <Row label="Stabilized comp benchmark" value="~$90K/door" sub="For 90%+ occupied assets — significant discount to stabilized value"/>
+            <Row label="Contract Price" value="$20,000,000" flag="green" sub="Renegotiated down from $23M — saving $3M / $4,286 per door"/>
+            <Row label="Blended Price Per Door" value={`$${fmt(CONTRACT_TOTAL/TOTAL_DOORS)}/door`} flag="green"/>
+            <Row label="The Pointe — allocated" value={`${(pA/1e6).toFixed(2)}M · $${fmt(pPPD)}/door`} sub={`${pointeAllocPct.toFixed(1)}% of contract`} flag="green"/>
+            <Row label="Oak Shadows — allocated" value={`${(oA/1e6).toFixed(2)}M · $${fmt(oPPD)}/door`} sub={`${oAP.toFixed(1)}% of contract`} flag="green"/>
+            <Row label="Stabilized comp benchmark" value="~$90K/door" sub={`$${fmt(90000-CONTRACT_TOTAL/TOTAL_DOORS)}/door margin to stabilized value`} flag="green"/>
           </Section>
           <Section title="The Pointe — Snapshot" color="#1e3a5f">
             <Row label="Units / Vintage" value="518 units · Early 1970s · Class C"/>
@@ -508,7 +560,7 @@ export default function App() {
             <Row label="Current Avg Rent" value="$912/unit" sub="vs $1,097 submarket asking avg"/>
             <Row label="Current NOI" value="Effectively zero — distressed" flag="red"/>
             <Row label="Renovation required for rent growth" value="$12–18K/unit full gut renovation" flag="yellow"/>
-            <Row label="All-in basis (mid-reno $14K)" value="~$46.9K/door" sub="$32.9K entry + $14K reno" flag="yellow"/>
+            <Row label="All-in basis (mid-reno $14K)" value={`~$${fmt(Math.round(pPPD)+14000)}/door`} sub={`$${fmt(Math.round(pPPD))} entry + $14K reno`} flag="green"/>
             <Row label="Rent ceiling post-reno" value="$899–$929/1BR · $1,099–$1,175/2BR" flag="green" sub="Red Pines model — same submarket"/>
           </Section>
           <Section title="Oak Shadows — Snapshot" color="#166534">
@@ -527,9 +579,7 @@ export default function App() {
           </Section>
         </>; })()}
 
-        {/* ════════════════════════════════════════
-            COMBINED — RISKS
-        ════════════════════════════════════════ */}
+        {/* ════ COMBINED — RISKS ════ */}
         {prop==="combined" && tab==="risks" && <>
           <Section title="🔴 Critical Risks — Must Resolve Before Closing" color="#dc2626">
             {[
@@ -552,7 +602,7 @@ export default function App() {
           </Section>
           <Section title="🟢 Genuine Upside Factors" color="#166634">
             {[
-              ["Entry Price Creates Massive Margin","$32.9K/door vs ~$90K stabilized comp benchmark. Even a partial stabilization generates significant equity."],
+              ["$3M Price Reduction Widens Margin Further","$28,571/door entry vs ~$90K stabilized benchmark — $61K+/door of potential appreciation. The renegotiation improved an already strong margin."],
               ["Oak Shadows Cash-Flowing from Day 1","$106,462/mo confirmed billing. ~$638K–$702K NOI/yr at 45–50% expense ratio. Positive carry while The Pointe is renovated."],
               ["Oak Shadows: Fill 18 Vacants = $193K/yr","18 vacant 2BR/750sf at $895 market = $16,110/mo = $193K/yr incremental. No renovation needed."],
               ["Oak Shadows: Unit 808 Fix = $7,200/yr Instant","Terminate PW employee lease, re-lease at $1,200 market = $600/mo = $7,200/yr instant NOI."],
@@ -561,9 +611,7 @@ export default function App() {
           </Section>
         </>}
 
-        {/* ════════════════════════════════════════
-            COMBINED — NEXT STEPS
-        ════════════════════════════════════════ */}
+        {/* ════ COMBINED — NEXT STEPS ════ */}
         {prop==="combined" && tab==="nextsteps" && <>
           <Section title="Immediate — Before Any Further Commitments" color="#dc2626">
             {[
@@ -607,19 +655,17 @@ export default function App() {
           </Section>
         </>}
 
-        {/* ════════════════════════════════════════
-            THE POINTE — OVERVIEW
-        ════════════════════════════════════════ */}
+        {/* ════ THE POINTE — OVERVIEW ════ */}
         {prop==="pointe" && tab==="overview" && <>
           <KpiGrid items={[
-            {label:"Units",         value:"518",           color:"#0f172a"},
-            {label:"Occupancy",     value:"~65%",          color:"#dc2626"},
-            {label:"Vacant Units",  value:"~181",          color:"#dc2626"},
-            {label:"Avg Rent",      value:"$912",          color:"#b45309"},
-            {label:"Submarket Avg", value:"$1,097",        color:"#475569", sub:"asking — effective lower"},
-            {label:"Entry Price",   value:`$${fmt(POINTE_PRICE)}`, color:"#16a34a"},
-            {label:"Per Door",      value:`$${fmt(PRICE_PER_DOOR)}`, color:"#16a34a"},
-            {label:"Current NOI",   value:"~$0",           color:"#dc2626", sub:"effectively distressed"},
+            {label:"Units",         value:"518",                                     color:"#0f172a"},
+            {label:"Occupancy",     value:"~65%",                                    color:"#dc2626"},
+            {label:"Vacant Units",  value:"~181",                                    color:"#dc2626"},
+            {label:"Avg Rent",      value:"$912",                                    color:"#b45309"},
+            {label:"Submarket Avg", value:"$1,097",                                  color:"#475569", sub:"asking — effective lower"},
+            {label:"Entry Price",   value:`$${fmt(POINTE_PRICE)}`,                   color:"#16a34a"},
+            {label:"Per Door",      value:`$${fmt(PRICE_PER_DOOR)}`,                 color:"#16a34a"},
+            {label:"Current NOI",   value:"~$0",                                     color:"#dc2626", sub:"effectively distressed"},
           ]}/>
           <Section title="Asset Snapshot" color="#1e3a5f">
             <Row label="Location" value="Pasadena, TX (Harris County)"/>
@@ -627,22 +673,22 @@ export default function App() {
             <Row label="Current Occupancy" value="~65%" flag="red" sub="~181 vacant units"/>
             <Row label="Current Avg Rent" value="$912/unit" sub="vs $1,097 submarket asking avg"/>
             <Row label="Current NOI" value="Effectively zero — distressed" flag="red"/>
-            <Row label="All-in basis (mid-reno $14K)" value="~$46.9K/door" flag="yellow" sub="$32.9K entry + $14K reno"/>
+            <Row label="All-in basis (mid-reno $14K)" value={`~$${fmt(Math.round(PRICE_PER_DOOR)+14000)}/door`} flag="green" sub={`$${fmt(Math.round(PRICE_PER_DOOR))} entry + $14K reno (down from ~$47K at $23M)`}/>
             <Row label="Stabilized comp benchmark" value="~$90K/door" flag="green" sub="For 90%+ occupied — significant upside margin"/>
           </Section>
           <Section title="Renovation Strategy — Las Plazas Sets the Target" color="#1e3a5f">
-            <Alrt type="green"><strong>Las Plazas (directly across the street) is the proof of concept.</strong> $13K/door renovation, 90%+ occupied, &lt;5% delinquency, waiting list on all 2BR+. This is the renovation spec and the rent target for The Pointe.</Alrt>
-            <Alrt type="yellow"><strong>⚠️ 1BR units are the weak spot at Las Plazas — and across the submarket.</strong> Willow Tree ($830) and Las Plazas ($809–$829) both struggle to fill 1BRs. Prioritize 2BR and 3BR renovation first at The Pointe to maximize early cash flow.</Alrt>
-            <Row label="Target renovation spec" value="$13,000/unit — Las Plazas standard" flag="yellow" sub="Confirmed achievable: 90%+ occ directly across the street"/>
+            <Alrt type="green"><strong>Las Plazas (directly across the street) is the proof of concept.</strong> $13K/door renovation, 90%+ occupied, &lt;5% delinquency, waiting list on all 2BR+.</Alrt>
+            <Alrt type="yellow"><strong>⚠️ 1BR units are the weak spot at Las Plazas — and across the submarket.</strong> Prioritize 2BR and 3BR renovation first at The Pointe to maximize early cash flow.</Alrt>
+            <Row label="Target renovation spec" value="$13,000/unit — Las Plazas standard" flag="yellow"/>
             <Row label="Post-reno 1BR target" value="$809–$829/unit" flag="yellow" sub="Las Plazas confirmed — but 1BRs slow to fill submarket-wide"/>
-            <Row label="Post-reno 2BR target" value="$949–$999/unit" flag="green" sub="Las Plazas confirmed — waiting list at this price point"/>
+            <Row label="Post-reno 2BR target" value="$949–$999/unit" flag="green" sub="Las Plazas confirmed — waiting list"/>
             <Row label="Post-reno 3BR target" value="$1,299/unit" flag="green" sub="Las Plazas confirmed — waiting list"/>
-            <Row label="Total capex (518 units · $13K)" value={`${fmt(518*13000)}`} flag="yellow"/>
-            <Row label="All-in basis post reno" value="~$45.9K/door" flag="green" sub="$32.9K entry + $13K reno vs ~$90K stabilized benchmark"/>
-            <Row label="Renovation priority order" value="2BR first → 3BR → 1BR last" flag="yellow" sub="Maximize waiting-list demand; defer slow-moving 1BRs"/>
+            <Row label="Total capex (518 units · $13K)" value={`$${fmt(518*13000)}`} flag="yellow"/>
+            <Row label="All-in basis post reno" value={`~$${fmt(Math.round(PRICE_PER_DOOR)+13000)}/door`} flag="green" sub="vs ~$90K stabilized benchmark"/>
+            <Row label="Renovation priority order" value="2BR first → 3BR → 1BR last" flag="yellow"/>
           </Section>
           <Section title="Stabilization Challenge" color="#dc2626">
-            <Alrt type="red"><strong>The Pointe is the turnaround play. Oak Shadows is the cash engine.</strong> This property requires capital, time, and operational execution.</Alrt>
+            <Alrt type="red"><strong>The Pointe is the turnaround play. Oak Shadows is the cash engine.</strong></Alrt>
             <Row label="Units to absorb (65% → 90%)" value="~130 additional units" flag="red"/>
             <Row label="Submarket vacancy" value="21.6% — up from 15.7% in 12 months" flag="red"/>
             <Row label="Absorption trend" value="Negative for 10 consecutive years (since 2016)" flag="red"/>
@@ -651,7 +697,6 @@ export default function App() {
           </Section>
         </>}
 
-        {/* THE POINTE — MARKET */}
         {prop==="pointe" && tab==="market" && <>
           <Alrt type="red"><strong>The submarket is moving against The Pointe specifically.</strong> Numbers from Jeff's CoStar report (3/2/2026).</Alrt>
           <Section title="Submarket Fundamentals — CoStar Report #85664871" color="#dc2626">
@@ -680,15 +725,13 @@ export default function App() {
           </Section>
         </>}
 
-        {/* THE POINTE — COMPS */}
         {prop==="pointe" && tab==="comps" && <>
           <Alrt type="yellow">All comps are renovated. <strong>The Pointe has not been renovated.</strong> Effective rents are the correct comparison benchmark.</Alrt>
           {pointeComps.map((c,i)=><CompCard key={i} c={c}/>)}
         </>}
 
-        {/* THE POINTE — EXIT MODEL */}
         {prop==="pointe" && tab==="exit" && <>
-          <Alrt type="purple">Exit model for <strong>The Pointe — 518 units.</strong> Entry price based on pro-rata share of $23M contract.</Alrt>
+          <Alrt type="purple">Exit model for <strong>The Pointe — 518 units.</strong> Entry reflects renegotiated $20M contract (pro-rata).</Alrt>
           <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
             {[
               {label:`Exit Cap Rate: ${pCapR.toFixed(1)}%`,min:5.5,max:9.0,step:0.1,val:pCapR,set:setPCapR},
@@ -715,14 +758,13 @@ export default function App() {
               </div>
             ))}
           </div>
-          <ExitTable rows={pRows} numUnits={POINTE_UNITS} entryPrice={PRICE_PER_DOOR} renoK={pRenoK} hold={pHold} color="#1e3a5f"/>
+          <ExitTable rows={pRows} numUnits={POINTE_UNITS} entryPrice={PRICE_PER_DOOR} renoK={pRenoK} hold={pHold}/>
           <div style={{background:"#fff",borderRadius:10,padding:"11px 13px",marginBottom:10}}>
             <label style={{fontSize:11,fontWeight:700,color:"#475569"}}>Hold Period: {pHold} yr{pHold!==1?"s":""}</label>
             <input type="range" min={1} max={10} step={1} value={pHold} onChange={e=>setPHold(parseInt(e.target.value))} style={{width:"100%",marginTop:4}}/>
           </div>
         </>}
 
-        {/* THE POINTE — RISKS */}
         {prop==="pointe" && tab==="risks" && <>
           <Section title="🔴 Critical Risks" color="#dc2626">
             {[
@@ -741,14 +783,13 @@ export default function App() {
           </Section>
           <Section title="🟢 Upside Factors" color="#166634">
             {[
-              ["Entry Price Provides Massive Buffer","$32.9K/door vs ~$90K stabilized benchmark. Downside protection is exceptional."],
+              ["Improved Entry Price Widens Buffer Further","$28,571/door vs ~$90K stabilized benchmark. The $3M price reduction added $4,286/door of additional margin."],
               ["Red Pines Proves the Ceiling","$899–$929/1BR, $1,099–$1,175/2BR — full gut reno, same submarket, no concessions."],
               ["Oak Shadows Carries the Carry","Oak Shadows cash flow covers operating costs while The Pointe stabilizes."],
             ].map(([t,b],i)=><Alrt key={i} type="green"><strong>{t}:</strong> {b}</Alrt>)}
           </Section>
         </>}
 
-        {/* THE POINTE — NEXT STEPS */}
         {prop==="pointe" && tab==="nextsteps" && <>
           <Section title="Immediate" color="#dc2626">
             {[
@@ -777,12 +818,9 @@ export default function App() {
           </Section>
         </>}
 
-        {/* THE POINTE — ECONOMIC INTEL */}
         {prop==="pointe" && tab==="econ" && <EconContent/>}
 
-        {/* ════════════════════════════════════════
-            OAK SHADOWS — OVERVIEW
-        ════════════════════════════════════════ */}
+        {/* ════ OAK SHADOWS — OVERVIEW ════ */}
         {prop==="oak" && tab==="overview" && <>
           <Alrt type="red"><strong>🚨 Unit 808 DEL comment confirms "PW EMPLOYEE."</strong> Parawest staff member in largest unit at $600 vs $1,200 market. Day-1 management transition should be assumed.</Alrt>
           <KpiGrid items={[
@@ -795,8 +833,8 @@ export default function App() {
             {label:"Monthly Billing",  value:`$${fmt(OAK.totalBillingMonthly)}`,  color:"#b45309"},
             {label:"Delinquency",      value:`$${fmt(DEL.total)}`,                color:"#dc2626"},
           ]}/>
-          <Section title="Confirmed Financials — OneSite 01/08/2026" color="#166534">
-            <Row label="Total Units" value="182" flag="green" sub="Confirmed — OneSite Page 12 summary"/>
+          <Section title="Confirmed Financials — OneSite 01/08/2026" color="#166634">
+            <Row label="Total Units" value="182" flag="green"/>
             <Row label="Occupied (no NTV)" value="143 units" flag="green"/>
             <Row label="Occupied (NTV)" value="4 units" flag="yellow" sub="Notice to vacate — will add to vacancy"/>
             <Row label="Vacant (not leased)" value="32 units" flag="red"/>
@@ -804,7 +842,7 @@ export default function App() {
             <Row label="Avg In-Place Rent" value="$709.10/unit" flag="yellow" sub="$53.70 below own market avg"/>
             <Row label="Total Monthly Billing" value={`$${fmt(OAK.totalBillingMonthly)}`} sub="Rent $104,237 + Parking $2,225" flag="yellow"/>
             <Row label="Annual Billing Run-Rate" value={`$${fmt(OAK.annualBilling)}`}/>
-            <Row label="Annual Revenue Gap to Market" value={`$${fmt((OAK.totalMarketMonthly-OAK.totalBillingMonthly)*12)}`} flag="red" sub="Market potential minus actual billing"/>
+            <Row label="Annual Revenue Gap to Market" value={`$${fmt((OAK.totalMarketMonthly-OAK.totalBillingMonthly)*12)}`} flag="red"/>
             <Row label="Est. NOI @ 45% expense" value={`$${fmt(OAK.annualBilling*0.55)}/yr`} flag="green" sub="Before 5–8% collections haircut"/>
           </Section>
           <Section title="Unit Mix — Key Issues" color="#1e3a5f">
@@ -841,15 +879,14 @@ export default function App() {
             </div>
           </Section>
           <Section title="Management — Parawest Community Development" color="#dc2626">
-            <Alrt type="red"><strong>🚨 Self-dealing confirmed.</strong> Parawest placed a staff member in Unit 808 (2x1-1167sf) at $600/mo vs $1,200 market. Day-1 management transition to Greenline should be assumed at closing, not evaluated post-close.</Alrt>
-            <Row label="Unit 808 conflict" value="PW Employee @ $600 vs $1,200 market" flag="red" sub="Confirmed via DEL report comment 01/07/2026"/>
+            <Alrt type="red"><strong>🚨 Self-dealing confirmed.</strong> Parawest placed a staff member in Unit 808 (2x1-1167sf) at $600/mo vs $1,200 market. Day-1 management transition to Greenline should be assumed at closing.</Alrt>
+            <Row label="Unit 808 conflict" value="PW Employee @ $600 vs $1,200 market" flag="red"/>
             <Row label="Delinquency rate" value="93.7% of one month billing outstanding" flag="red"/>
-            <Row label="2x1-750 vacancy" value="18 of 50 units vacant despite near-market rents" flag="red" sub="Suggests leasing inactivity"/>
+            <Row label="2x1-750 vacancy" value="18 of 50 units vacant despite near-market rents" flag="red"/>
             <Row label="Recommendation" value="Day-1 transition to Greenline — bilingual, same submarket" flag="red"/>
           </Section>
         </>}
 
-        {/* OAK SHADOWS — DELINQUENCY */}
         {prop==="oak" && tab==="delinquency" && <>
           <Alrt type="red"><strong>Delinquency Report — OneSite, Fiscal Period 01/2026, as of 01/08/2026.</strong> 85 accounts · $99,797.93 net delinquent · Zero prepaid.</Alrt>
           <KpiGrid items={[
@@ -885,7 +922,7 @@ export default function App() {
           </div>
           <Section title="🚨 Unit 808 — PW Employee (Highest Priority)" color="#dc2626">
             <Row label="Unit" value="808 — 2x1-1167sf (largest unit on property)"/>
-            <Row label="Resident" value="Mariela, Perla · (832)728-4318" />
+            <Row label="Resident" value="Mariela, Perla · (832)728-4318"/>
             <Row label="Balance" value="$600.00 current" flag="yellow" sub="Monthly rent — currently 'current' on payments"/>
             <Row label="Market rent for this unit" value="$1,200/mo" flag="red"/>
             <Row label="Monthly discount" value="$600/mo — 50% below market" flag="red"/>
@@ -894,7 +931,7 @@ export default function App() {
             <Row label="Action required" value="Pull complete lease · Identify employee · Terminate at expiry · Re-lease at $1,200" flag="red"/>
           </Section>
           <Section title="PRIORMGMT Inherited Bad Debt" color="#7c3aed">
-            <Alrt type="purple"><strong>Multiple units carry PRIORMGMT charge codes</strong> — unpaid balances from the prior management company. Almost entirely uncollectable. Will need to be written off at or after closing.</Alrt>
+            <Alrt type="purple"><strong>Multiple units carry PRIORMGMT charge codes</strong> — almost entirely uncollectable. Will need to be written off at or after closing.</Alrt>
             <Row label="Unit 812 PRIORMGMT" value="$3,990.00" flag="red" sub="Largest — re-filing eviction in progress"/>
             <Row label="Unit 930 PRIORMGMT" value="$3,785.68" flag="red" sub="Former resident — entirely 90+ day"/>
             <Row label="Unit 923 PRIORMGMT" value="$765.00" flag="yellow" sub="Former resident"/>
@@ -932,9 +969,8 @@ export default function App() {
           </Section>
         </>}
 
-        {/* OAK SHADOWS — MARKET */}
         {prop==="oak" && tab==="market" && <>
-          <Alrt type="green"><strong>Oak Shadows at 80.77% is outperforming its submarket.</strong> The 21.6% submarket vacancy is concentrated in distressed assets. Oak Shadows proves local demand exists at this price point.</Alrt>
+          <Alrt type="green"><strong>Oak Shadows at 80.77% is outperforming its submarket.</strong> The 21.6% submarket vacancy is concentrated in distressed assets.</Alrt>
           <Section title="Submarket Context" color="#1e3a5f">
             <Row label="Submarket vacancy" value="21.6%" flag="red" sub="Up from 15.7% — driven by LyondellBasell closure"/>
             <Row label="Oak Shadows occupancy" value="80.77%" flag="green" sub="Outperforming submarket"/>
@@ -942,7 +978,7 @@ export default function App() {
             <Row label="Oak Shadows avg in-place" value="$709.10/unit" flag="yellow" sub="$53.70 below own market rate — upside without reno"/>
             <Row label="Oak Shadows market rate (system)" value="$762.80/unit" sub="Note: 1x1-520 field is outdated — true potential $670–$720"/>
           </Section>
-          <Section title="Rent Upside — No Renovation Required" color="#166534">
+          <Section title="Rent Upside — No Renovation Required" color="#166634">
             <Alrt type="green">Oak Shadows has meaningful rent upside at lease renewal with zero capital deployed.</Alrt>
             <Row label="Occupied units × rent gap" value="147 × $53.70 = $7,894/mo" flag="green" sub="$94.7K/yr incremental at lease renewal"/>
             <Row label="Fill 18 vacant 2x1-750 at market" value="18 × $895 = $16,110/mo" flag="green" sub="$193.3K/yr incremental — no renovation"/>
@@ -950,22 +986,20 @@ export default function App() {
             <Row label="Total near-term upside" value="~$295K/yr" flag="green" sub="Without any renovation capex"/>
           </Section>
           <Section title="Where Oak Shadows Can Go With Renovation" color="#1e3a5f">
-            <Row label="Silver Club benchmark (0.15 mi)" value="$950–$1,050/unit" flag="yellow" sub="Updated but not fully renovated"/>
+            <Row label="Silver Club benchmark (0.15 mi)" value="$950–$1,050/unit" flag="yellow"/>
             <Row label="Red Pines ceiling (full gut reno)" value="Studio $749 | 1BR $899–$929 | 2BR $1,099–$1,175" flag="green"/>
-            <Row label="Terracita (fully reno, 91.5% occ)" value="~$815–$1,050 ex-utilities" flag="green" sub="All bills paid — normalize for utilities"/>
+            <Row label="Terracita (fully reno, 91.5% occ)" value="~$815–$1,050 ex-utilities" flag="green"/>
             <Row label="Realistic stabilized target" value="$830–$900 blended" flag="yellow" sub="Light targeted improvements · bilingual management"/>
           </Section>
         </>}
 
-        {/* OAK SHADOWS — COMPS */}
         {prop==="oak" && tab==="comps" && <>
           <Alrt type="yellow">Oak Shadows comps focus on the immediate neighborhood and workforce housing profile. Silver Club is the direct neighbor (0.15 mi). Red Pines is the aspirational ceiling.</Alrt>
           {oakComps.map((c,i)=><CompCard key={i} c={c}/>)}
         </>}
 
-        {/* OAK SHADOWS — EXIT MODEL */}
         {prop==="oak" && tab==="exit" && <>
-          <Alrt type="purple">Exit model for <strong>Oak Shadows — 182 units.</strong> Entry price based on pro-rata share of $23M contract. T-12 required to confirm expense ratio.</Alrt>
+          <Alrt type="purple">Exit model for <strong>Oak Shadows — 182 units.</strong> Entry reflects renegotiated $20M contract (pro-rata).</Alrt>
           <div style={{display:"flex",gap:10,marginBottom:12,flexWrap:"wrap"}}>
             {[
               {label:`Exit Cap Rate: ${oCapR.toFixed(1)}%`,min:5.5,max:9.0,step:0.1,val:oCapR,set:setOCapR},
@@ -993,17 +1027,16 @@ export default function App() {
               </div>
             ))}
           </div>
-          <ExitTable rows={oRows} numUnits={OAK_UNITS} entryPrice={PRICE_PER_DOOR} renoK={oRenoK} hold={oHold} color="#166534"/>
+          <ExitTable rows={oRows} numUnits={OAK_UNITS} entryPrice={PRICE_PER_DOOR} renoK={oRenoK} hold={oHold}/>
           <div style={{background:"#fff",borderRadius:10,padding:"11px 13px",marginBottom:10}}>
             <label style={{fontSize:11,fontWeight:700,color:"#475569"}}>Hold Period: {oHold} yr{oHold!==1?"s":""}</label>
             <input type="range" min={1} max={10} step={1} value={oHold} onChange={e=>setOHold(parseInt(e.target.value))} style={{width:"100%",marginTop:4}}/>
           </div>
           <div style={{background:"#f0fdf4",border:"1px solid #86efac",borderRadius:10,padding:"12px 16px",fontSize:12,color:"#166534"}}>
-            💡 <strong>Key Oak Shadows insight:</strong> At current billing ($106,462/mo) and a 7.5% exit cap, Oak Shadows alone at 50% expense ratio generates ~<strong>$8.5M in exit value</strong> — vs the ~$6M pro-rata acquisition cost. That's meaningful Day-1 equity before any improvement.
+            💡 <strong>Key Oak Shadows insight:</strong> At current billing ($106,462/mo) and a 7.5% exit cap, Oak Shadows alone at 50% expense ratio generates ~<strong>$8.5M in exit value</strong> — vs the ~${fmt(OAK_PRICE)} pro-rata acquisition cost at $20M. That's meaningful Day-1 equity before any improvement.
           </div>
         </>}
 
-        {/* OAK SHADOWS — RISKS */}
         {prop==="oak" && tab==="risks" && <>
           <Section title="🔴 Critical Risks" color="#dc2626">
             {[
@@ -1028,18 +1061,17 @@ export default function App() {
               ["Fill 18 Vacants = $193K/yr","No renovation required — pure management/leasing execution."],
               ["Rent-to-Market Upside = $94.7K/yr","147 occupied units × $53.70 gap — achievable at lease renewal without capex."],
               ["Unit 808 Fix = $7,200/yr Instant","Terminate PW employee lease, re-lease at $1,200 market."],
-              ["Entry Creates Day-1 Equity","~$6M acquisition cost vs ~$8.5M implied value at current billing and 7.5% cap."],
+              ["Stronger Day-1 Equity at $20M","Acquisition cost ~$5.2M pro-rata vs ~$8.5M implied value at current billing and 7.5% cap. Wider margin than at $23M."],
             ].map(([t,b],i)=><Alrt key={i} type="green"><strong>{t}:</strong> {b}</Alrt>)}
           </Section>
         </>}
 
-        {/* OAK SHADOWS — NEXT STEPS */}
         {prop==="oak" && tab==="nextsteps" && <>
           <Section title="Immediate" color="#dc2626">
             {[
-              ["Pull Unit 808 Complete Lease","PW EMPLOYEE confirmed. Get full lease, term, employee identity, determine disclosure status. This is both a legal and management-conduct issue."],
-              ["HOPA Age Verification Survey","Request full tenant DOB records from Parawest. If records don't exist, that itself is an active violation. #1 legal priority."],
-              ["Inspect 18 Vacant 2x1-750 Units","Walk every vacant 2BR/750. Determine condition vs. management/marketing problem. Condition issue = capex. Marketing = Day-1 management change."],
+              ["Pull Unit 808 Complete Lease","PW EMPLOYEE confirmed. Get full lease, term, employee identity, determine disclosure status."],
+              ["HOPA Age Verification Survey","Request full tenant DOB records from Parawest. #1 legal priority."],
+              ["Inspect 18 Vacant 2x1-750 Units","Walk every vacant 2BR/750. Condition vs. management/marketing problem."],
               ["Day-1 Greenline Management Proposal","Unit 808 disclosure makes this non-negotiable. Get a transition proposal with Day-1 leasing plan for the 18 vacant 2BRs."],
             ].map(([t,b],i)=>(
               <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fee2e2",alignItems:"flex-start"}}>
@@ -1050,9 +1082,9 @@ export default function App() {
           </Section>
           <Section title="Due Diligence — Within 2 Weeks" color="#b45309">
             {[
-              ["T-12 Financials","Actual cash receipts, write-off history, eviction costs, PRIORMGMT balance detail. Cross-ref $99.8K delinquency against cash collected."],
+              ["T-12 Financials","Actual cash receipts, write-off history, eviction costs, PRIORMGMT balance detail."],
               ["Inspect 6 Vacant 2x1-850 Units","Condition survey on all 6 vacant 850sf units."],
-              ["Update Market Rents in OneSite","1x1-520 market rate ($595) is materially outdated — tenants paying $625–$890. Request Parawest run a market survey."],
+              ["Update Market Rents in OneSite","1x1-520 market rate ($595) is materially outdated — tenants paying $625–$890."],
               ["Parawest Background Check","Research other Parawest-managed properties. Understand systemic management issues."],
             ].map(([t,b],i)=>(
               <div key={i} style={{display:"flex",gap:10,padding:"9px 0",borderBottom:"1px solid #fed7aa",alignItems:"flex-start"}}>
@@ -1074,12 +1106,11 @@ export default function App() {
           </Section>
         </>}
 
-        {/* OAK SHADOWS — ECONOMIC INTEL */}
         {prop==="oak" && tab==="econ" && <EconContent/>}
 
         <div style={{textAlign:"center",fontSize:10,color:"#94a3b8",marginTop:12,paddingBottom:8}}>
           Seeds InvestCo Due Diligence · March 2026 · Confidential — Internal Use Only<br/>
-          $23M Contract · 700 Doors · $32,857/door · Oak Shadows OneSite confirmed 01/08/2026
+          <strong style={{color:"#16a34a"}}>$20M Contract (Renegotiated ↓$3M)</strong> · 700 Doors · ${fmt(CONTRACT_TOTAL/TOTAL_DOORS)}/door · Oak Shadows OneSite confirmed 01/08/2026
         </div>
       </div>
     </div>
